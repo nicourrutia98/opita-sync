@@ -1,0 +1,39 @@
+[
+  {
+    "conversation_id": "conv_req_001",
+    "tenant_id": "tenant_demo",
+    "user_id": "user_requester_001",
+    "active_case_id": "case_001",
+    "messages": [
+      {
+        "sender_type": "user",
+        "content_text": "I need to report a maintenance issue in pump line 3."
+      },
+      {
+        "sender_type": "assistant",
+        "content_text": "I can help with that. What location and priority should we use?"
+      },
+      {
+        "sender_type": "tool",
+        "tool_name": "request_create",
+        "content_text": "Draft request fields extracted. Review before submitting."
+      }
+    ]
+  },
+  {
+    "conversation_id": "conv_sup_001",
+    "tenant_id": "tenant_demo",
+    "user_id": "user_supervisor_001",
+    "active_case_id": "case_002",
+    "messages": [
+      {
+        "sender_type": "user",
+        "content_text": "Show me the latest visible update for case MX-0021."
+      },
+      {
+        "sender_type": "assistant",
+        "content_text": "The case is in progress and currently assigned to field technician Ana Rojas."
+      }
+    ]
+  }
+]

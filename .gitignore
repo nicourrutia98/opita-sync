@@ -1,0 +1,34 @@
+# Root
+.DS_Store
+Thumbs.db
+
+# Local env
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Python / misc tooling
+__pycache__/
+.pytest_cache/
+
+# Project local outputs
+frontend/.expo/
+frontend/dist/
+frontend/node_modules/
+backend/dist/
+backend/node_modules/
+backend/coverage/
+
+# Temporary system files
+*.tmp

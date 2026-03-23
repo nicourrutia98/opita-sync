@@ -1,0 +1,563 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TenantStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  REVOKED
+}
+
+enum RoleCode {
+  TENANT_ADMIN
+  SUPERVISOR
+  TECHNICIAN
+  REQUESTER
+}
+
+enum PolicyTargetType {
+  ROLE
+  USER
+}
+
+enum PolicyEffect {
+  ALLOW
+  DENY
+}
+
+enum SessionStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum SenderType {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum ConversationStatus {
+  ACTIVE
+  ARCHIVED
+  CLOSED
+}
+
+enum CaseStatus {
+  DRAFT
+  OPEN
+  IN_PROGRESS
+  CLOSED
+  CANCELLED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum ToolRiskLevel {
+  READ_ONLY
+  DRAFT_ONLY
+  WRITE_WITH_CONFIRMATION
+  AUTO_EXECUTABLE_LOW_RISK
+}
+
+enum ToolExecutionMode {
+  SUGGEST
+  CONFIRM_THEN_EXECUTE
+  AUTO_EXECUTE
+}
+
+enum ToolCertificationStatus {
+  DRAFT
+  REVIEWED
+  CERTIFIED
+  PRODUCTION
+  DEPRECATED
+}
+
+enum ToolExecutionResult {
+  SUCCESS
+  FAILED
+  BLOCKED
+  REQUIRES_CONFIRMATION
+}
+
+enum ConfirmationStatus {
+  NOT_REQUIRED
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+enum ConfirmationRequestStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  EXPIRED
+}
+
+model Tenant {
+  id                  String             @id @default(cuid())
+  slug                String             @unique
+  name                String
+  status              TenantStatus       @default(ACTIVE)
+  timezone            String             @default("America/Bogota")
+  dataReuseOptIn      Boolean            @default(false) @map("data_reuse_opt_in")
+  retentionPolicyCode String             @default("default-180d") @map("retention_policy_code")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+  memberships         TenantMembership[]
+  roles               UserRole[]
+  permissionPolicies  PermissionPolicy[]
+  settings            TenantSetting[]
+  sessions            Session[]
+  invitations         TenantInvitation[]
+  conversations       Conversation[]
+  conversationSummary ConversationSummary[]
+  messages            ConversationMessage[]
+  cases               Case[]
+  caseContexts        CaseContext[]
+  auditEvents         AuditEvent[]
+  llmTraces           LlmTrace[]
+  toolRegistryEntries ToolRegistry[]
+  actionPolicyRules   ActionPolicyRule[]
+  toolExecutionAttempts ToolExecutionAttempt[]
+  positiveActions     PositiveAction[]
+  confirmationRequests ConfirmationRequest[]
+
+  @@map("tenants")
+}
+
+model User {
+  id                String             @id @default(cuid())
+  externalRef       String?            @unique @map("external_ref")
+  firebaseUid       String?            @unique @map("firebase_uid")
+  displayName       String             @map("display_name")
+  email             String?            @db.VarChar(320)
+  phoneNumber       String?            @map("phone_number")
+  locale            String             @default("es-CO")
+  timezone          String             @default("America/Bogota")
+  accessibilityOverridesJson Json?     @map("accessibility_overrides_json")
+  status            UserStatus         @default(ACTIVE)
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  memberships       TenantMembership[]
+  roles             UserRole[]
+  sessions          Session[]
+  sentInvitations   TenantInvitation[] @relation("InvitationInviter")
+  conversations     Conversation[]
+  casesRequested    Case[]             @relation("CaseRequester")
+  casesOwned        Case[]             @relation("CaseOwner")
+  auditEvents       AuditEvent[]
+  toolExecutionAttempts ToolExecutionAttempt[] @relation("ToolExecutionActor")
+  positiveActions   PositiveAction[]   @relation("PositiveActionActor")
+  confirmationRequests ConfirmationRequest[] @relation("ConfirmationRequestActor")
+  confirmedRequests ConfirmationRequest[] @relation("ConfirmationRequestConfirmer")
+
+  @@index([email])
+  @@index([phoneNumber])
+  @@map("users")
+}
+
+model TenantMembership {
+  id          String           @id @default(cuid())
+  tenantId    String           @map("tenant_id")
+  userId      String           @map("user_id")
+  status      MembershipStatus @default(ACTIVE)
+  invitedById String?          @map("invited_by_id")
+  joinedAt    DateTime?        @map("joined_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([tenantId, status])
+  @@map("tenant_memberships")
+}
+
+model UserRole {
+  id         String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  userId      String   @map("user_id")
+  roleCode    RoleCode @map("role_code")
+  assignedAt  DateTime @default(now()) @map("assigned_at")
+  assignedById String? @map("assigned_by_id")
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, roleCode])
+  @@index([tenantId, roleCode])
+  @@map("user_roles")
+}
+
+model PermissionPolicy {
+  id           String           @id @default(cuid())
+  tenantId      String           @map("tenant_id")
+  targetType    PolicyTargetType @map("target_type")
+  targetRef     String           @map("target_ref")
+  permissionKey String           @map("permission_key")
+  effect        PolicyEffect
+  reason        String?
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, targetType, targetRef, permissionKey])
+  @@index([tenantId, targetType, targetRef])
+  @@map("permission_policies")
+}
+
+model TenantSetting {
+  id               String   @id @default(cuid())
+  tenantId         String   @map("tenant_id")
+  settingGroup     String   @map("setting_group")
+  settingKey       String   @map("setting_key")
+  settingValueJson Json     @map("setting_value_json")
+  version          Int      @default(1)
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, settingGroup, settingKey])
+  @@index([tenantId, settingGroup])
+  @@map("tenant_settings")
+}
+
+model Session {
+  id                String        @id @default(cuid())
+  tenantId          String        @map("tenant_id")
+  userId            String        @map("user_id")
+  refreshTokenHash  String        @map("refresh_token_hash")
+  status            SessionStatus @default(ACTIVE)
+  expiresAt         DateTime      @map("expires_at")
+  lastUsedAt        DateTime?     @map("last_used_at")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  tenant            Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, status])
+  @@map("sessions")
+}
+
+model TenantInvitation {
+  id               String           @id @default(cuid())
+  tenantId         String           @map("tenant_id")
+  email            String           @db.VarChar(320)
+  invitedRoleCode  RoleCode         @map("invited_role_code")
+  tokenHash        String           @map("token_hash")
+  status           InvitationStatus @default(PENDING)
+  expiresAt        DateTime         @map("expires_at")
+  invitedByUserId  String           @map("invited_by_user_id")
+  acceptedByUserId String?          @map("accepted_by_user_id")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invitedByUser    User             @relation("InvitationInviter", fields: [invitedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, email, status])
+  @@map("tenant_invitations")
+}
+
+model Conversation {
+  id                 String                @id @default(cuid())
+  tenantId           String                @map("tenant_id")
+  userId             String                @map("user_id")
+  roleCode           RoleCode              @map("role_code")
+  title              String?
+  activeCaseId       String?               @map("active_case_id")
+  status             ConversationStatus    @default(ACTIVE)
+  lastSummaryId      String?               @map("last_summary_id")
+  lastCapabilityCode String?               @map("last_capability_code")
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+  tenant             Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages           ConversationMessage[]
+  summaries          ConversationSummary[]
+  activeCase          Case?                 @relation("ConversationActiveCase", fields: [activeCaseId], references: [id], onDelete: SetNull)
+  originatingCase     Case?                 @relation("ConversationOriginCase")
+  auditEvents        AuditEvent[]
+  llmTraces          LlmTrace[]
+  toolExecutionAttempts ToolExecutionAttempt[]
+  positiveActions    PositiveAction[]
+  confirmationRequests ConfirmationRequest[]
+
+  @@index([tenantId, userId, status])
+  @@map("conversations")
+}
+
+model ConversationMessage {
+  id                    String       @id @default(cuid())
+  tenantId              String       @map("tenant_id")
+  conversationId        String       @map("conversation_id")
+  messageIndex          Int          @map("message_index")
+  senderType            SenderType   @map("sender_type")
+  senderRef             String?      @map("sender_ref")
+  contentText           String       @map("content_text")
+  contentStructuredJson Json?        @map("content_structured_json")
+  isSensitive           Boolean      @default(false) @map("is_sensitive")
+  createdAt             DateTime     @default(now()) @map("created_at")
+  tenant                Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation          Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, messageIndex])
+  @@index([tenantId, conversationId])
+  @@map("conversation_messages")
+}
+
+model ConversationSummary {
+  id                    String       @id @default(cuid())
+  tenantId              String       @map("tenant_id")
+  conversationId        String       @map("conversation_id")
+  summaryText           String       @map("summary_text")
+  summaryStructuredJson Json?        @map("summary_structured_json")
+  sourceMessageFrom     Int          @map("source_message_from")
+  sourceMessageTo       Int          @map("source_message_to")
+  createdAt             DateTime     @default(now()) @map("created_at")
+  tenant                Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation          Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, conversationId, createdAt])
+  @@map("conversation_summaries")
+}
+
+model Case {
+  id                        String      @id @default(cuid())
+  tenantId                  String      @map("tenant_id")
+  caseCode                  String      @map("case_code")
+  caseType                  String      @map("case_type")
+  statusCode                CaseStatus  @default(OPEN) @map("status_code")
+  priorityCode              String      @map("priority_code")
+  requesterUserId           String      @map("requester_user_id")
+  ownerUserId               String?     @map("owner_user_id")
+  createdFromConversationId String?     @unique @map("created_from_conversation_id")
+  createdAt                 DateTime    @default(now()) @map("created_at")
+  updatedAt                 DateTime    @updatedAt @map("updated_at")
+  tenant                    Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requesterUser             User        @relation("CaseRequester", fields: [requesterUserId], references: [id], onDelete: Restrict)
+  ownerUser                 User?       @relation("CaseOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  activeConversations       Conversation[] @relation("ConversationActiveCase")
+  originConversation        Conversation?  @relation("ConversationOriginCase", fields: [createdFromConversationId], references: [id], onDelete: SetNull)
+  contexts                  CaseContext[]
+  auditEvents               AuditEvent[]
+  llmTraces                 LlmTrace[]
+  toolExecutionAttempts     ToolExecutionAttempt[]
+  positiveActions           PositiveAction[]
+  confirmationRequests      ConfirmationRequest[]
+
+  @@unique([tenantId, caseCode])
+  @@index([tenantId, statusCode])
+  @@map("cases")
+}
+
+model CaseContext {
+  id               String   @id @default(cuid())
+  tenantId         String   @map("tenant_id")
+  caseId           String   @map("case_id")
+  contextType      String   @map("context_type")
+  contextKey       String   @map("context_key")
+  contextValueJson Json     @map("context_value_json")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case             Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, contextType, contextKey])
+  @@index([tenantId, caseId])
+  @@map("case_context")
+}
+
+model AuditEvent {
+  id              String        @id @default(cuid())
+  tenantId        String        @map("tenant_id")
+  actorUserId     String?       @map("actor_user_id")
+  actorRoleCode   RoleCode?     @map("actor_role_code")
+  conversationId  String?       @map("conversation_id")
+  caseId          String?       @map("case_id")
+  capabilityCode  String?       @map("capability_code")
+  eventCode       String        @map("event_code")
+  entityType      String        @map("entity_type")
+  entityId        String        @map("entity_id")
+  beforeStateJson Json?         @map("before_state_json")
+  afterStateJson  Json?         @map("after_state_json")
+  resultCode      String        @map("result_code")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actorUser       User?         @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  conversation    Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  case            Case?         @relation(fields: [caseId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, eventCode, createdAt])
+  @@map("audit_events")
+}
+
+model LlmTrace {
+  id                   String        @id @default(cuid())
+  tenantId             String        @map("tenant_id")
+  conversationId       String?       @map("conversation_id")
+  caseId               String?       @map("case_id")
+  capabilityCode       String?       @map("capability_code")
+  providerName         String        @map("provider_name")
+  modelName            String        @map("model_name")
+  requestContractJson  Json?         @map("request_contract_json")
+  responseContractJson Json?         @map("response_contract_json")
+  tokenInputCount      Int?          @map("token_input_count")
+  tokenOutputCount     Int?          @map("token_output_count")
+  latencyMs            Int?          @map("latency_ms")
+  resultCode           String        @map("result_code")
+  createdAt            DateTime      @default(now()) @map("created_at")
+  tenant               Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation         Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  case                 Case?         @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  positiveActions      PositiveAction[]
+
+  @@index([tenantId, createdAt])
+  @@map("llm_traces")
+}
+
+model ToolRegistry {
+  id                  String                  @id @default(cuid())
+  tenantId            String                  @map("tenant_id")
+  toolCode            String                  @map("tool_code")
+  toolVersion         String                  @map("tool_version")
+  capabilityCode      String                  @map("capability_code")
+  toolType            String                  @map("tool_type")
+  riskLevel           ToolRiskLevel           @map("risk_level")
+  executionMode       ToolExecutionMode       @map("execution_mode")
+  certificationStatus ToolCertificationStatus @map("certification_status")
+  tenantScopeMode     String                  @map("tenant_scope_mode")
+  permissionsRequiredJson Json                @map("permissions_required_json")
+  requiresProvider    Boolean                 @default(false) @map("requires_provider")
+  rollbackStrategy    String                  @map("rollback_strategy")
+  inputContractRef    String                  @map("input_contract_ref")
+  outputContractRef   String                  @map("output_contract_ref")
+  createdAt           DateTime                @default(now()) @map("created_at")
+  updatedAt           DateTime                @updatedAt @map("updated_at")
+  tenant              Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actionPolicyRules   ActionPolicyRule[]
+  executionAttempts   ToolExecutionAttempt[]
+
+  @@unique([tenantId, toolCode, toolVersion])
+  @@index([tenantId, capabilityCode, certificationStatus])
+  @@map("tool_registry")
+}
+
+model ActionPolicyRule {
+  id                   String            @id @default(cuid())
+  tenantId             String            @map("tenant_id")
+  capabilityCode       String            @map("capability_code")
+  toolCode             String            @map("tool_code")
+  toolVersion          String            @map("tool_version")
+  riskLevel            ToolRiskLevel     @map("risk_level")
+  defaultExecutionMode ToolExecutionMode @map("default_execution_mode")
+  tenantOverrideJson   Json?             @map("tenant_override_json")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
+  tenant               Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  toolRegistry         ToolRegistry      @relation(fields: [tenantId, toolCode, toolVersion], references: [tenantId, toolCode, toolVersion], onDelete: Cascade)
+
+  @@unique([tenantId, capabilityCode, toolCode, toolVersion])
+  @@index([tenantId, capabilityCode])
+  @@map("action_policy_rules")
+}
+
+model ToolExecutionAttempt {
+  id                  String              @id @default(cuid())
+  tenantId            String              @map("tenant_id")
+  conversationId      String?             @map("conversation_id")
+  caseId              String?             @map("case_id")
+  actorUserId         String?             @map("actor_user_id")
+  intentCode          String?             @map("intent_code")
+  capabilityCode      String              @map("capability_code")
+  toolCode            String              @map("tool_code")
+  toolVersion         String              @map("tool_version")
+  executionMode       ToolExecutionMode   @map("execution_mode")
+  confirmationRequired Boolean            @default(false) @map("confirmation_required")
+  confirmationStatus  ConfirmationStatus  @default(NOT_REQUIRED) @map("confirmation_status")
+  executionResult     ToolExecutionResult @map("execution_result")
+  requestPayloadJson  Json?               @map("request_payload_json")
+  responsePayloadJson Json?               @map("response_payload_json")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  tenant              Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation        Conversation?       @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  case                Case?               @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  actorUser           User?               @relation("ToolExecutionActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  toolRegistry        ToolRegistry        @relation(fields: [tenantId, toolCode, toolVersion], references: [tenantId, toolCode, toolVersion], onDelete: Cascade)
+  positiveActions     PositiveAction[]
+
+  @@index([tenantId, capabilityCode, createdAt])
+  @@index([tenantId, toolCode, toolVersion, createdAt])
+  @@map("tool_execution_attempts")
+}
+
+model PositiveAction {
+  id                 String               @id @default(cuid())
+  tenantId           String               @map("tenant_id")
+  conversationId     String?              @map("conversation_id")
+  caseId             String?              @map("case_id")
+  actorUserId        String?              @map("actor_user_id")
+  capabilityCode     String               @map("capability_code")
+  toolCode           String               @map("tool_code")
+  toolVersion        String               @map("tool_version")
+  executionAttemptId String               @unique @map("execution_attempt_id")
+  auditEventId       String?              @map("audit_event_id")
+  providerTraceId    String?              @map("provider_trace_id")
+  createdAt          DateTime             @default(now()) @map("created_at")
+  tenant             Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation       Conversation?        @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  case               Case?                @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  actorUser          User?                @relation("PositiveActionActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  executionAttempt   ToolExecutionAttempt @relation(fields: [executionAttemptId], references: [id], onDelete: Cascade)
+  llmTrace           LlmTrace?            @relation(fields: [providerTraceId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, capabilityCode, createdAt])
+  @@index([tenantId, toolCode, toolVersion, createdAt])
+  @@map("positive_actions")
+}
+
+model ConfirmationRequest {
+  id                 String                    @id @default(cuid())
+  tenantId           String                    @map("tenant_id")
+  conversationId     String?                   @map("conversation_id")
+  caseId             String?                   @map("case_id")
+  actorUserId        String                    @map("actor_user_id")
+  capabilityCode     String                    @map("capability_code")
+  toolCode           String                    @map("tool_code")
+  toolVersion        String                    @map("tool_version")
+  confirmationCode   String                    @map("confirmation_code")
+  status             ConfirmationRequestStatus @default(PENDING)
+  requestedPayloadJson Json                    @map("requested_payload_json")
+  expiresAt          DateTime                  @map("expires_at")
+  confirmedAt        DateTime?                 @map("confirmed_at")
+  confirmedByUserId  String?                   @map("confirmed_by_user_id")
+  createdAt          DateTime                  @default(now()) @map("created_at")
+  updatedAt          DateTime                  @updatedAt @map("updated_at")
+  tenant             Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation       Conversation?             @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  case               Case?                     @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  actorUser          User                      @relation("ConfirmationRequestActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  confirmedByUser    User?                     @relation("ConfirmationRequestConfirmer", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, capabilityCode, createdAt])
+  @@index([tenantId, status, expiresAt])
+  @@map("confirmation_requests")
+}

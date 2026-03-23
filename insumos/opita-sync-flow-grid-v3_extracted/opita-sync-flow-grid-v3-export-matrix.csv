@@ -1,0 +1,27 @@
+asset,file,format,dimensions,use,notes
+Primary horizontal logo,opita-sync-flow-grid-v3-primary.svg,SVG,627×141 viewBox,"App header, auth, docs",Preferred vector production asset
+Primary horizontal logo,opita-sync-flow-grid-v3-primary.png,PNG,627×141,Fallback raster,Transparent background
+Primary mono dark,opita-sync-flow-grid-v3-primary-mono-dark.svg,SVG,627×141 viewBox,Single-color on light surfaces,Uses ink slate only
+Primary mono light,opita-sync-flow-grid-v3-primary-mono-light.svg,SVG,627×141 viewBox,Single-color on dark surfaces,White mono asset
+Standalone mark,opita-sync-flow-grid-v3-mark.svg,SVG,320×320 viewBox,Compact product contexts,Full-color brand mark
+Standalone mark,opita-sync-flow-grid-v3-mark.png,PNG,320×320,Fallback raster,Transparent background
+Mark mono dark,opita-sync-flow-grid-v3-mark-mono-dark.svg,SVG,320×320 viewBox,Single-color on light surfaces,Ink-only
+Mark mono light,opita-sync-flow-grid-v3-mark-mono-light.svg,SVG,320×320 viewBox,Single-color on dark surfaces,White mono asset
+App tile light,opita-sync-flow-grid-v3-app-tile.svg,SVG,1024×1024 viewBox,Launcher source,Rounded-square tile
+App tile light,opita-sync-flow-grid-v3-app-tile.png,PNG,1024×1024,Launcher source / preview,Light tile
+App tile dark,opita-sync-flow-grid-v3-app-tile-dark.svg,SVG,1024×1024 viewBox,Dark launcher source,Dark solid surface
+App tile dark,opita-sync-flow-grid-v3-app-tile-dark.png,PNG,1024×1024,Dark launcher source / preview,Dark tile
+Apple touch icon,opita-sync-flow-grid-v3-apple-touch-icon-180.png,PNG,180×180,Apple touch icon,Light tile export
+Android Chrome icon,opita-sync-flow-grid-v3-android-chrome-192.png,PNG,192×192,PWA / Android,Light tile export
+Android Chrome icon,opita-sync-flow-grid-v3-android-chrome-512.png,PNG,512×512,PWA / Android,Light tile export
+App icon master,opita-sync-flow-grid-v3-app-icon-1024.png,PNG,1024×1024,Store / source use,Master raster export
+Favicon source,opita-sync-flow-grid-v3-favicon.svg,SVG,64×64 viewBox,Browser favicon source,Tuned small-size mark
+Favicon,opita-sync-flow-grid-v3-favicon-16.png,PNG,16×16,Browser tab,Use included export
+Favicon,opita-sync-flow-grid-v3-favicon-32.png,PNG,32×32,Browser tab / pinned UI,Use included export
+Favicon,opita-sync-flow-grid-v3-favicon-48.png,PNG,48×48,Browser / Windows,Use included export
+Favicon,opita-sync-flow-grid-v3-favicon-64.png,PNG,64×64,Browser / preview,Use included export
+Favicon bundle,opita-sync-flow-grid-v3-favicon.ico,ICO,16/32/48/64,Classic browser fallback,Bundled multi-size ICO
+Guide,opita-sync-flow-grid-v3-clear-space-guide.png,PNG,872×353,Brand usage reference,Shows x spacing rule
+Guide,opita-sync-flow-grid-v3-minimum-sizes-guide.png,PNG,1600×900,Brand usage reference,Shows minimum recommended sizes
+Board,opita-sync-flow-grid-v3-board.png,PNG,2200×1700,Review / approval,Overview board
+Spec,opita-sync-flow-grid-v3-spec.md,MD,text,Handoff,Core usage rules

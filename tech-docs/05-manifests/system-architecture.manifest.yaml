@@ -1,0 +1,41 @@
+id: system-architecture
+source_docs:
+  - docs/00-overview/product-blueprint.md
+  - docs/01-explanation/foundations.md
+  - docs/02-reference/standard-pilot-spec.md
+  - docs/02-reference/context-and-memory-management.md
+artifact_type: system-architecture
+status: approved-baseline
+tenant_scope: global
+actors:
+  - requester
+  - technician
+  - supervisor
+  - tenant-admin
+entities:
+  - tenant
+  - user
+  - conversation
+  - case
+permissions:
+  - role-based-access
+  - tenant-boundary
+audit_events:
+  - request-received
+  - capability-selected
+  - model-called
+  - action-completed
+data_touched:
+  - conversation-state
+  - case-state
+  - tenant-configuration
+context_inputs:
+  - tenant-rules
+  - user-permissions
+  - case-state
+  - recent-messages
+outputs:
+  - technical-architecture-baseline
+open_questions:
+  - aws-deployment-shape
+phase: phase-1

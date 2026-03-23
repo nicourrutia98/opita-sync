@@ -1,0 +1,38 @@
+id: context-builder-contract
+source_docs:
+  - docs/02-reference/context-and-memory-management.md
+  - docs/02-reference/implementation-proposals.md
+  - docs/02-reference/standard-pilot-spec.md
+artifact_type: context-contract
+status: approved-baseline
+tenant_scope: global
+actors:
+  - requester
+  - technician
+  - supervisor
+entities:
+  - conversation
+  - summary
+  - case
+permissions:
+  - tenant-filter
+  - role-filter
+audit_events:
+  - context-built
+  - context-insufficient
+data_touched:
+  - recent-messages
+  - case-state
+  - retrieved-context
+context_inputs:
+  - tenant-id
+  - user-id
+  - role
+  - conversation-id
+  - case-id
+  - capability-id
+outputs:
+  - model-request-payload
+open_questions:
+  - final-interface-contract
+phase: phase-1

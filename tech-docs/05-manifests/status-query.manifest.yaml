@@ -1,0 +1,31 @@
+id: status-query
+source_docs:
+  - tech-docs/01-capabilities/status-query.spec.md
+artifact_type: capability-spec
+status: approved-baseline
+tenant_scope: tenant-configurable
+actors:
+  - requester
+  - technician
+  - supervisor
+entities:
+  - case
+permissions:
+  - read-status
+audit_events:
+  - case-status-queried
+data_touched:
+  - case-state
+  - visible-updates
+context_inputs:
+  - case-header
+  - role-visibility
+outputs:
+  - status-view
+tool_types:
+  - case_reader
+  - context_retriever
+default_execution_mode: suggest
+positive_action_eligible: true
+open_questions: []
+phase: phase-2

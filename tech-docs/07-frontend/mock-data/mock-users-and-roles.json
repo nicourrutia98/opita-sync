@@ -1,0 +1,47 @@
+[
+  {
+    "user_id": "user_requester_001",
+    "tenant_id": "tenant_demo",
+    "role": "requester",
+    "permissions": [
+      "conversation.create",
+      "conversation.read",
+      "conversation.write",
+      "case.create",
+      "case.read"
+    ]
+  },
+  {
+    "user_id": "user_technician_001",
+    "tenant_id": "tenant_demo",
+    "role": "technician",
+    "permissions": [
+      "conversation.read",
+      "conversation.write",
+      "case.read",
+      "case.update"
+    ]
+  },
+  {
+    "user_id": "user_supervisor_001",
+    "tenant_id": "tenant_demo",
+    "role": "supervisor",
+    "permissions": [
+      "conversation.read",
+      "case.read",
+      "audit.read"
+    ]
+  },
+  {
+    "user_id": "user_admin_001",
+    "tenant_id": "tenant_demo",
+    "role": "tenant-admin",
+    "permissions": [
+      "tenant.manage_members",
+      "tenant.manage_settings",
+      "conversation.read",
+      "case.read",
+      "audit.read"
+    ]
+  }
+]

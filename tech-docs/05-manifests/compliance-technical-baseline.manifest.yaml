@@ -1,0 +1,32 @@
+id: compliance-technical-baseline
+source_docs:
+  - docs/06-compliance/data-and-retention-policy.md
+  - docs/02-reference/product-ownership-and-pilot-terms.md
+artifact_type: data-policy
+status: approved-baseline
+tenant_scope: global
+actors:
+  - tenant
+  - opita-code
+  - model-provider
+entities:
+  - operational-memory
+  - reusable-chat-history
+  - retention-policy
+permissions:
+  - opt-in-required
+  - no-cross-tenant-reuse
+audit_events:
+  - opt-in-recorded
+  - retention-policy-applied
+data_touched:
+  - chat-history
+  - audit-evidence
+context_inputs:
+  - tenant-opt-in
+  - retention-rule
+outputs:
+  - compliance-technical-baseline
+open_questions:
+  - legal-formalization-doc
+phase: phase-1

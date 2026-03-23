@@ -1,0 +1,31 @@
+id: draft-generation
+source_docs:
+  - tech-docs/01-capabilities/draft-generation.spec.md
+artifact_type: capability-spec
+status: approved-baseline
+tenant_scope: tenant-configurable
+actors:
+  - technician
+  - supervisor
+entities:
+  - case
+  - draft
+permissions:
+  - generate-draft
+audit_events:
+  - draft-generated
+data_touched:
+  - case-summary
+  - template
+context_inputs:
+  - case-summary
+  - tenant-template
+outputs:
+  - draft-text
+tool_types:
+  - template_resolver
+  - draft_generator
+default_execution_mode: suggest
+positive_action_eligible: true
+open_questions: []
+phase: phase-2

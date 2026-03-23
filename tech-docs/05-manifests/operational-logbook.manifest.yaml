@@ -1,0 +1,30 @@
+id: operational-logbook
+source_docs:
+  - tech-docs/01-capabilities/operational-logbook.spec.md
+artifact_type: capability-spec
+status: approved-baseline
+tenant_scope: tenant-configurable
+actors:
+  - technician
+entities:
+  - case
+  - logbook-entry
+permissions:
+  - write-logbook
+audit_events:
+  - case-logbook-updated
+data_touched:
+  - case-state
+  - evidence
+context_inputs:
+  - active-case
+  - validation-rules
+outputs:
+  - logbook-update
+tool_types:
+  - logbook_writer
+  - state_transition_checker
+default_execution_mode: confirm_then_execute
+positive_action_eligible: true
+open_questions: []
+phase: phase-2

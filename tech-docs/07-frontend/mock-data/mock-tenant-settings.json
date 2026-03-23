@@ -1,0 +1,27 @@
+{
+  "tenant_id": "tenant_demo",
+  "branding": {
+    "app_name": "Opita Sync Demo",
+    "logo_url": null,
+    "accent_token": "teal"
+  },
+  "theme_defaults": {
+    "color_theme_mode": "light",
+    "contrast_mode": "high",
+    "focus_indicator_mode": "strong",
+    "content_density": "comfortable"
+  },
+  "accessibility_defaults": {
+    "font_scale": "normal",
+    "line_spacing_mode": "relaxed",
+    "letter_spacing_mode": "normal",
+    "reduced_motion": "system",
+    "form_assistance_mode": "guided"
+  },
+  "user_override_example": {
+    "user_id": "user_requester_001",
+    "font_scale": "large",
+    "contrast_mode": "high",
+    "reduced_motion": "on"
+  }
+}

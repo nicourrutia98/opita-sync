@@ -1,0 +1,39 @@
+id: capability-map
+source_docs:
+  - docs/02-reference/standard-pilot-spec.md
+  - docs/02-reference/capability-governance.md
+artifact_type: capability-spec
+status: approved-baseline
+tenant_scope: tenant-configurable
+actors:
+  - requester
+  - technician
+  - supervisor
+  - tenant-admin
+entities:
+  - case
+  - request
+  - logbook-entry
+  - draft
+permissions:
+  - create-request
+  - read-status
+  - write-logbook
+  - generate-draft
+audit_events:
+  - case-created
+  - status-queried
+  - logbook-updated
+  - draft-generated
+data_touched:
+  - case-data
+  - operational-metadata
+context_inputs:
+  - capability-rules
+  - tenant-templates
+  - user-role
+outputs:
+  - phase-1-capability-map
+open_questions:
+  - final-capability-ids
+phase: phase-1

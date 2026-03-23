@@ -1,0 +1,24 @@
+[
+  {
+    "case_id": "case_001",
+    "tenant_id": "tenant_demo",
+    "case_code": "MX-0019",
+    "status_code": "open",
+    "priority_code": "high",
+    "requester_user_id": "user_requester_001",
+    "assigned_user_id": "user_technician_001",
+    "summary": "Maintenance issue reported for pump line 3 with visible leak and vibration.",
+    "latest_visible_update": "Request created and assigned to field technician."
+  },
+  {
+    "case_id": "case_002",
+    "tenant_id": "tenant_demo",
+    "case_code": "MX-0021",
+    "status_code": "in_progress",
+    "priority_code": "medium",
+    "requester_user_id": "user_requester_002",
+    "assigned_user_id": "user_technician_002",
+    "summary": "Inspection in progress for repeated pressure instability.",
+    "latest_visible_update": "On-site verification started."
+  }
+]

@@ -1,0 +1,43 @@
+{
+  "theme_id": "opita-neutral-accessible-v1",
+  "mode": "light",
+  "tokens": {
+    "color.surface.app": "#F7F8FA",
+    "color.surface.panel": "#FFFFFF",
+    "color.surface.elevated": "#EEF2F7",
+    "color.surface.input": "#FFFFFF",
+    "color.text.primary": "#111827",
+    "color.text.secondary": "#334155",
+    "color.text.muted": "#64748B",
+    "color.text.inverse": "#F8FAFC",
+    "color.border.default": "#CBD5E1",
+    "color.border.strong": "#475569",
+    "color.action.primary": "#0F766E",
+    "color.action.primaryText": "#FFFFFF",
+    "color.action.secondary": "#E2E8F0",
+    "color.status.success": "#166534",
+    "color.status.warning": "#A16207",
+    "color.status.error": "#B91C1C",
+    "color.status.info": "#1D4ED8",
+    "color.focus.ring": "#0F62FE",
+    "color.focus.ringOffset": "#FFFFFF"
+  },
+  "typography": {
+    "font.base": "Source Sans 3, Noto Sans, Segoe UI, sans-serif",
+    "font.mono": "IBM Plex Mono, ui-monospace, monospace",
+    "size.xs": 12,
+    "size.sm": 14,
+    "size.md": 16,
+    "size.lg": 18,
+    "size.xl": 20,
+    "line.normal": 1.5,
+    "line.relaxed": 1.75
+  },
+  "layout": {
+    "touchTarget.min": 24,
+    "thread.maxWidth.standard": 760,
+    "thread.maxWidth.wide": 920,
+    "rail.width.desktop.left": 304,
+    "rail.width.desktop.right": 360
+  }
+}

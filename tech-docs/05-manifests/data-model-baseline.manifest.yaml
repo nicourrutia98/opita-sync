@@ -1,0 +1,37 @@
+id: data-model-baseline
+source_docs:
+  - docs/02-reference/context-and-memory-management.md
+  - docs/06-compliance/data-and-retention-policy.md
+  - docs/02-reference/implementation-proposals.md
+artifact_type: data-policy
+status: approved-baseline
+tenant_scope: global
+actors:
+  - tenant
+  - opita-code
+entities:
+  - tenant-settings
+  - conversations
+  - conversation-messages
+  - conversation-summaries
+  - case-context
+  - audit-events
+  - llm-traces
+permissions:
+  - tenant-segregation
+  - retention-control
+audit_events:
+  - data-retained
+  - data-accessed
+  - model-invoked
+data_touched:
+  - operational-memory
+  - improvement-opt-in
+context_inputs:
+  - tenant-policy
+  - retention-policy
+outputs:
+  - phase-1-data-baseline
+open_questions:
+  - exact-columns
+phase: phase-1

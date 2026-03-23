@@ -1,0 +1,33 @@
+id: request-create
+source_docs:
+  - tech-docs/01-capabilities/request-create.spec.md
+artifact_type: capability-spec
+status: approved-baseline
+tenant_scope: tenant-configurable
+actors:
+  - requester
+entities:
+  - case
+  - case-context
+permissions:
+  - create-request
+audit_events:
+  - case-created
+data_touched:
+  - form-input
+  - case-state
+context_inputs:
+  - form-schema
+  - tenant-rules
+  - assignment-rules
+outputs:
+  - case
+  - assistant-confirmation
+tool_types:
+  - case_writer
+  - form_validator
+  - assignment_resolver
+default_execution_mode: confirm_then_execute
+positive_action_eligible: true
+open_questions: []
+phase: phase-2
