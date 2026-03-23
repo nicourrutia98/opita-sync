@@ -1,0 +1,579 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleKey {
+  solicitante
+  tecnico
+  supervisor
+  admin
+}
+
+enum CasePriority {
+  Alta
+  Media
+  Baja
+}
+
+enum CaseStatus {
+  Nuevo
+  En_curso
+  Bloqueado
+  Resuelto
+}
+
+enum MessageTone {
+  user
+  assistant
+  system
+}
+
+enum EvidenceVisibility {
+  internal
+  supervisor_only
+}
+
+enum PolicyMode {
+  suggest
+  confirm_then_execute
+  auto_execute
+}
+
+enum ToolRiskLevel {
+  low
+  medium
+  high
+  critical
+}
+
+enum ToolCertificationState {
+  draft
+  certified
+  deprecated
+}
+
+enum DraftChannel {
+  interno
+  cliente
+}
+
+enum DraftStatus {
+  ready
+  pending_approval
+}
+
+enum GovernanceActionKind {
+  approve_capability
+  deploy_release
+  rollback_release
+}
+
+enum GovernanceActionStatus {
+  success
+  blocked
+}
+
+enum ReleaseChannel {
+  staging
+  production
+}
+
+model Tenant {
+  id                  String                  @id @default(cuid())
+  slug                String                  @unique
+  name                String
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  users               User[]
+  userRoleAssignments UserRoleAssignment[]
+  cases               Case[]
+  caseAssignments     CaseAssignment[]
+  caseStatusHistory   CaseStatusHistory[]
+  conversations       Conversation[]
+  conversationMessages ConversationMessage[]
+  operationalLogEntries OperationalLogEntry[]
+  operationalEvidence OperationalEvidence[]
+  sessions            Session[]
+  refreshTokens       RefreshToken[]
+  capabilities        TenantCapabilityState[]
+  toolPolicyOverrides ToolPolicyOverride[]
+  parameters          TenantParameterValue[]
+  drafts              Draft[]
+  draftApprovals      DraftApproval[]
+  valueMetricEvents   ValueMetricEvent[]
+  valueMetricSnapshots ValueMetricSnapshot[]
+  retentionPolicy     RetentionPolicy?
+  dataReuseConsent    DataReuseConsent?
+  usageEvents         UsageEvent[]
+  billingExports      BillingExport[]
+  governanceActions   GovernanceAction[]
+  deployments         Deployment[]
+  rollbackEvents      RollbackEvent[]
+  navigationManifests NavigationManifest[]
+  auditEvents         AuditEvent[]
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  tenantId            String
+  fullName            String
+  email               String
+  passwordHash        String
+  active              Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  deletedAt           DateTime?
+  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  roleAssignments     UserRoleAssignment[]
+  sessions            Session[]
+  refreshTokens       RefreshToken[]
+  assignedCases       CaseAssignment[]
+  conversations       Conversation[]
+  conversationMessages ConversationMessage[]
+  operationalLogs     OperationalLogEntry[]
+  drafts              Draft[]
+  draftApprovals      DraftApproval[]
+  governanceActions   GovernanceAction[]
+  auditEvents         AuditEvent[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model Role {
+  id          String               @id @default(cuid())
+  key         RoleKey              @unique
+  label       String
+  assignments UserRoleAssignment[]
+}
+
+model UserRoleAssignment {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, userId, roleId])
+  @@index([tenantId, roleId])
+}
+
+model Session {
+  id           String      @id @default(cuid())
+  tenantId     String
+  userId       String
+  deviceLabel  String?
+  accessJti    String      @unique
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokens RefreshToken[]
+
+  @@index([tenantId, userId])
+}
+
+model RefreshToken {
+  id          String    @id @default(cuid())
+  tenantId    String
+  userId      String
+  sessionId   String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session     Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId])
+}
+
+model Case {
+  id             String              @id @default(cuid())
+  tenantId       String
+  code           String
+  title          String
+  site           String
+  priority       CasePriority
+  status         CaseStatus
+  summary        String
+  suggestedAction String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignments    CaseAssignment[]
+  statusHistory  CaseStatusHistory[]
+  conversations  Conversation[]
+  operationalLogs OperationalLogEntry[]
+  drafts         Draft[]
+  usageEvents    UsageEvent[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, status, priority])
+}
+
+model CaseAssignment {
+  id         String   @id @default(cuid())
+  tenantId   String
+  caseId     String
+  userId     String
+  createdAt  DateTime @default(now())
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case       Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, caseId, userId])
+  @@index([tenantId, userId])
+}
+
+model CaseStatusHistory {
+  id         String     @id @default(cuid())
+  tenantId   String
+  caseId     String
+  fromStatus CaseStatus?
+  toStatus   CaseStatus
+  createdAt  DateTime   @default(now())
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case       Case       @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, caseId, createdAt])
+}
+
+model Conversation {
+  id          String               @id @default(cuid())
+  tenantId    String
+  caseId      String?
+  userId      String
+  title       String
+  promptDraft String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case        Case?                @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages    ConversationMessage[]
+
+  @@index([tenantId, caseId])
+}
+
+model ConversationMessage {
+  id             String      @id @default(cuid())
+  tenantId       String
+  conversationId String
+  authorId       String?
+  tone           MessageTone
+  body           String
+  createdAt      DateTime    @default(now())
+  tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  author         User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, conversationId, createdAt])
+}
+
+model OperationalLogEntry {
+  id          String             @id @default(cuid())
+  tenantId    String
+  caseId      String
+  authorId    String
+  type        String
+  detail      String
+  visibility  EvidenceVisibility
+  beforeValue String?
+  afterValue  String?
+  auditId     String
+  createdAt   DateTime           @default(now())
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case        Case               @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  author      User               @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  evidence    OperationalEvidence[]
+
+  @@index([tenantId, caseId, createdAt])
+}
+
+model OperationalEvidence {
+  id          String               @id @default(cuid())
+  tenantId    String
+  logEntryId  String
+  label       String
+  uri         String?
+  createdAt   DateTime             @default(now())
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  logEntry    OperationalLogEntry  @relation(fields: [logEntryId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, logEntryId])
+}
+
+model Capability {
+  id          String                 @id @default(cuid())
+  key         String                 @unique
+  name        String
+  description String
+  requiresApproval Boolean           @default(false)
+  active      Boolean                @default(true)
+  deletedAt   DateTime?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  tenants     TenantCapabilityState[]
+  toolLinks   ToolCapabilityLink[]
+}
+
+model TenantCapabilityState {
+  id           String      @id @default(cuid())
+  tenantId     String
+  capabilityId String
+  enabled      Boolean     @default(true)
+  policyMode   PolicyMode
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  capability   Capability  @relation(fields: [capabilityId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, capabilityId])
+  @@index([tenantId, enabled])
+}
+
+model Tool {
+  id            String                @id @default(cuid())
+  key           String                @unique
+  name          String
+  riskLevel     ToolRiskLevel
+  certification ToolCertificationState
+  environment   ReleaseChannel
+  maxPolicyMode PolicyMode
+  active        Boolean               @default(true)
+  deletedAt     DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  links         ToolCapabilityLink[]
+  overrides     ToolPolicyOverride[]
+}
+
+model ToolCapabilityLink {
+  id           String      @id @default(cuid())
+  capabilityId String
+  toolId       String
+  createdAt    DateTime    @default(now())
+  capability   Capability  @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+  tool         Tool        @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([capabilityId, toolId])
+}
+
+model ToolPolicyOverride {
+  id             String      @id @default(cuid())
+  tenantId       String
+  toolId         String
+  tenantOverrideAllowed Boolean @default(false)
+  blockedReason  String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tool           Tool        @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, toolId])
+}
+
+model TenantParameter {
+  id          String               @id @default(cuid())
+  key         String               @unique
+  label       String
+  editable    Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  values      TenantParameterValue[]
+}
+
+model TenantParameterValue {
+  id          String          @id @default(cuid())
+  tenantId    String
+  parameterId String
+  value       String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parameter   TenantParameter @relation(fields: [parameterId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, parameterId])
+}
+
+model Draft {
+  id             String       @id @default(cuid())
+  tenantId       String
+  caseId         String
+  authorId       String
+  channel        DraftChannel
+  tone           String
+  content        String
+  requiresApproval Boolean    @default(false)
+  status         DraftStatus
+  auditId        String
+  createdAt      DateTime     @default(now())
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case           Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  author         User         @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  approvals      DraftApproval[]
+
+  @@index([tenantId, caseId, createdAt])
+}
+
+model DraftApproval {
+  id          String      @id @default(cuid())
+  tenantId    String
+  draftId     String
+  approverId  String
+  approved    Boolean
+  createdAt   DateTime    @default(now())
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  draft       Draft       @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  approver    User        @relation(fields: [approverId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, draftId, createdAt])
+}
+
+model ValueMetricEvent {
+  id           String    @id @default(cuid())
+  tenantId     String
+  metricKey    String
+  label        String
+  value        String
+  trend        String
+  positiveImpact String
+  occurredAt   DateTime  @default(now())
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, metricKey, occurredAt])
+}
+
+model ValueMetricSnapshot {
+  id           String    @id @default(cuid())
+  tenantId     String
+  periodLabel  String
+  role         RoleKey
+  payload      Json
+  createdAt    DateTime  @default(now())
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, role, createdAt])
+}
+
+model UsageEvent {
+  id             String    @id @default(cuid())
+  tenantId       String
+  caseId         String?
+  successful     Boolean   @default(true)
+  estimatedTokens Int
+  occurredAt     DateTime  @default(now())
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case           Case?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, occurredAt])
+}
+
+model BillingExport {
+  id           String    @id @default(cuid())
+  tenantId     String
+  exportCode   String
+  rows         Int
+  createdAt    DateTime  @default(now())
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, exportCode])
+}
+
+model AuditEvent {
+  id          String    @id @default(cuid())
+  tenantId    String
+  actorUserId String?
+  module      String
+  action      String
+  entityType  String
+  entityId    String?
+  status      String
+  details     Json
+  createdAt   DateTime  @default(now())
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actorUser   User?     @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, module, createdAt])
+}
+
+model RetentionPolicy {
+  id                        String   @id @default(cuid())
+  tenantId                  String   @unique
+  operationalRetentionDays  Int
+  auditRetentionDays        Int
+  anonymizationRequiredForReuse Boolean @default(true)
+  dataReuseDefaultOptIn     Boolean  @default(false)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  tenant                    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model DataReuseConsent {
+  id         String   @id @default(cuid())
+  tenantId   String   @unique
+  enabled    Boolean  @default(false)
+  updatedAt  DateTime @default(now())
+  auditId    String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model GovernanceAction {
+  id         String                @id @default(cuid())
+  tenantId   String
+  actorUserId String
+  action     GovernanceActionKind
+  status     GovernanceActionStatus
+  auditId    String
+  detail     String
+  createdAt  DateTime              @default(now())
+  tenant     Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actorUser  User                  @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, action, createdAt])
+}
+
+model Deployment {
+  id          String         @id @default(cuid())
+  tenantId    String
+  channel     ReleaseChannel
+  versionTag  String
+  createdAt   DateTime       @default(now())
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rollbackEvents RollbackEvent[]
+}
+
+model RollbackEvent {
+  id          String   @id @default(cuid())
+  tenantId    String
+  deploymentId String?
+  reason      String
+  createdAt   DateTime @default(now())
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deployment  Deployment? @relation(fields: [deploymentId], references: [id], onDelete: SetNull)
+}
+
+model NavigationManifest {
+  id             String   @id @default(cuid())
+  tenantId       String
+  role           RoleKey
+  primaryViews   Json
+  backofficeViews Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, role])
+}

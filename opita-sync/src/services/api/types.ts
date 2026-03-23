@@ -1,0 +1,223 @@
+export interface DashboardDto {
+  metrics: Array<{ label: string; value: string; helper: string }>;
+  inbox: string[];
+  supervisorMetrics: Array<{ label: string; value: string; helper: string }>;
+  supervisorQueue: Array<{ title: string; detail: string; tone: "brand" | "warning" | "danger" }>;
+  supervisorSignals: string[];
+}
+
+export interface CaseSummaryDto {
+  id: string;
+  title: string;
+  site: string;
+  priority: "Alta" | "Media" | "Baja";
+  status: "Nuevo" | "En curso" | "Bloqueado" | "Resuelto";
+  owner: string;
+  updatedAt: string;
+  summary: string;
+}
+
+export interface CaseDetailDto extends CaseSummaryDto {
+  timeline: Array<{ time: string; type: string; detail: string }>;
+  suggestedAction: string;
+}
+
+export interface ConversationDto {
+  title: string;
+  promptDraft: string;
+  messages: Array<{ id: string; tone: "user" | "assistant" | "system"; body: string }>;
+}
+
+export interface TenantConfigDto {
+  activeCapabilities: string;
+  limits: string;
+  risks: string[];
+  parameters: Array<{
+    key: string;
+    label: string;
+    value: string;
+    editable: boolean;
+  }>;
+}
+
+export interface OperationalLogEntryDto {
+  id: string;
+  caseId: string;
+  author: string;
+  type: string;
+  detail: string;
+  createdAt: string;
+  visibility: "internal" | "supervisor_only";
+  before?: string;
+  after?: string;
+  evidenceLabel?: string;
+  auditId: string;
+}
+
+export interface CreateOperationalLogEntryDto {
+  caseId: string;
+  type: string;
+  detail: string;
+  visibility: "internal" | "supervisor_only";
+  before?: string;
+  after?: string;
+  evidenceLabel?: string;
+}
+
+export interface CapabilityDto {
+  id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  policyMode: "suggest" | "confirm_then_execute" | "auto_execute";
+  requiresApproval: boolean;
+}
+
+export interface SetCapabilityStateDto {
+  capabilityId: string;
+  enabled: boolean;
+}
+
+export interface ToolGovernanceDto {
+  id: string;
+  name: string;
+  capabilityId: string;
+  riskLevel: "low" | "medium" | "high" | "critical";
+  certification: "draft" | "certified" | "deprecated";
+  environment: "staging" | "production";
+  maxPolicyMode: "suggest" | "confirm_then_execute" | "auto_execute";
+  tenantOverrideAllowed: boolean;
+  blockedReason?: string;
+}
+
+export interface UpdateTenantParameterDto {
+  key: string;
+  value: string;
+}
+
+export interface MutationResponseDto {
+  updated: boolean;
+  auditId: string;
+}
+
+export interface DraftRequestDto {
+  caseId: string;
+  prompt: string;
+  channel: "interno" | "cliente";
+  tone: string;
+}
+
+export interface DraftResponseDto {
+  id: string;
+  caseId: string;
+  channel: "interno" | "cliente";
+  tone: string;
+  content: string;
+  requiresApproval: boolean;
+  status: "ready" | "pending_approval";
+  auditId: string;
+}
+
+export interface ValueMetricDto {
+  id: string;
+  label: string;
+  value: string;
+  trend: string;
+  positiveImpact: string;
+}
+
+export interface ValueReportDto {
+  periodLabel: string;
+  metrics: ValueMetricDto[];
+}
+
+export interface UsageAttributionDto {
+  tenantId: string;
+  periodLabel: string;
+  successfulActions: number;
+  totalEstimatedTokens: number;
+}
+
+export interface BillingExportDto {
+  exportId: string;
+  generatedAt: string;
+  rows: number;
+}
+
+export interface GlobalGovernanceStateDto {
+  releaseChannel: "staging" | "production";
+  capabilitiesCertified: number;
+  toolsCertified: number;
+  lastDeploymentAt: string;
+  rollbackReady: boolean;
+}
+
+export interface GlobalGovernanceActionDto {
+  action: "approve_capability" | "deploy_release" | "rollback_release";
+}
+
+export interface GlobalGovernanceActionResultDto {
+  action: "approve_capability" | "deploy_release" | "rollback_release";
+  status: "success" | "blocked";
+  auditId: string;
+  detail: string;
+}
+
+export interface RetentionPolicyDto {
+  tenantId: string;
+  operationalRetentionDays: number;
+  auditRetentionDays: number;
+  anonymizationRequiredForReuse: boolean;
+  dataReuseDefaultOptIn: boolean;
+}
+
+export interface DataReuseConsentDto {
+  tenantId: string;
+  enabled: boolean;
+  updatedAt: string;
+  auditId: string;
+}
+
+export interface UpdateDataReuseConsentDto {
+  enabled: boolean;
+}
+
+export interface NavigationManifestDto {
+  role: "solicitante" | "tecnico" | "supervisor" | "admin";
+  primaryViews: Array<"inicio" | "chat" | "casos" | "detalle" | "configuracion">;
+  backofficeViews: Array<"inicio" | "chat" | "casos" | "detalle" | "configuracion">;
+}
+
+export interface SignInRequestDto {
+  email: string;
+  password: string;
+}
+
+export interface SignInResponseDto {
+  accessToken: string;
+  expiresAt: string;
+  bootstrap: SessionDto;
+}
+
+export interface SessionDto {
+  user: {
+    id: string;
+    fullName: string;
+    email: string;
+  };
+  tenant: {
+    id: string;
+    name: string;
+  };
+  role: "solicitante" | "tecnico" | "supervisor" | "admin";
+  allowedViews: Array<"inicio" | "chat" | "casos" | "detalle" | "configuracion">;
+}
+
+export interface PasswordResetRequestDto {
+  email: string;
+}
+
+export interface PasswordResetConfirmDto {
+  token: string;
+  password: string;
+}

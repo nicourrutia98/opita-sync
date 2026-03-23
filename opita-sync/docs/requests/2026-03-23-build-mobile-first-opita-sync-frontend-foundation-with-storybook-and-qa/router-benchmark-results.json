@@ -1,0 +1,150 @@
+{
+  "generated_at": "2026-03-23T20:51:08.335Z",
+  "dataset_version": "benchmark-set.v1",
+  "policy_version": "routing-policy.v1",
+  "execution_mode": "mock",
+  "records": [
+    {
+      "mode": "baseline",
+      "case_id": "case-001",
+      "success": true,
+      "estimated_cost_usd": 0.000463,
+      "latency_ms": 0,
+      "total_tokens": 43,
+      "fallback_count": 0
+    },
+    {
+      "mode": "router",
+      "case_id": "case-001",
+      "success": true,
+      "estimated_cost_usd": 0.000027,
+      "latency_ms": 0,
+      "total_tokens": 40,
+      "fallback_count": 0
+    },
+    {
+      "mode": "baseline",
+      "case_id": "case-002",
+      "success": true,
+      "estimated_cost_usd": 0.001164,
+      "latency_ms": 0,
+      "total_tokens": 110,
+      "fallback_count": 0
+    },
+    {
+      "mode": "router",
+      "case_id": "case-002",
+      "success": true,
+      "estimated_cost_usd": 0.000068,
+      "latency_ms": 0,
+      "total_tokens": 104,
+      "fallback_count": 0
+    },
+    {
+      "mode": "baseline",
+      "case_id": "case-003",
+      "success": true,
+      "estimated_cost_usd": 0.00073,
+      "latency_ms": 0,
+      "total_tokens": 68,
+      "fallback_count": 0
+    },
+    {
+      "mode": "router",
+      "case_id": "case-003",
+      "success": true,
+      "estimated_cost_usd": 0.00073,
+      "latency_ms": 0,
+      "total_tokens": 68,
+      "fallback_count": 0
+    },
+    {
+      "mode": "baseline",
+      "case_id": "case-004",
+      "success": true,
+      "estimated_cost_usd": 0.000841,
+      "latency_ms": 0,
+      "total_tokens": 79,
+      "fallback_count": 0
+    },
+    {
+      "mode": "router",
+      "case_id": "case-004",
+      "success": true,
+      "estimated_cost_usd": 0.000046,
+      "latency_ms": 0,
+      "total_tokens": 71,
+      "fallback_count": 0
+    },
+    {
+      "mode": "baseline",
+      "case_id": "case-005",
+      "success": true,
+      "estimated_cost_usd": 0.000745,
+      "latency_ms": 1,
+      "total_tokens": 69,
+      "fallback_count": 0
+    },
+    {
+      "mode": "router",
+      "case_id": "case-005",
+      "success": true,
+      "estimated_cost_usd": 0.000745,
+      "latency_ms": 0,
+      "total_tokens": 69,
+      "fallback_count": 0
+    },
+    {
+      "mode": "baseline",
+      "case_id": "case-006",
+      "success": true,
+      "estimated_cost_usd": 0.000917,
+      "latency_ms": 0,
+      "total_tokens": 85,
+      "fallback_count": 0
+    },
+    {
+      "mode": "router",
+      "case_id": "case-006",
+      "success": true,
+      "estimated_cost_usd": 0.00005,
+      "latency_ms": 0,
+      "total_tokens": 76,
+      "fallback_count": 0
+    }
+  ],
+  "summary": {
+    "baseline": {
+      "request_count": 6,
+      "success_count": 6,
+      "pass_rate_pct": 100,
+      "total_cost_usd": 0.00486,
+      "cost_per_successful_request_usd": 0.00081,
+      "p95_latency_ms": 1,
+      "average_tokens_per_request": 76,
+      "fallback_rate_pct": 0,
+      "average_latency_ms": 0
+    },
+    "router": {
+      "request_count": 6,
+      "success_count": 6,
+      "pass_rate_pct": 100,
+      "total_cost_usd": 0.001666,
+      "cost_per_successful_request_usd": 0.000278,
+      "p95_latency_ms": 0,
+      "average_tokens_per_request": 71,
+      "fallback_rate_pct": 0,
+      "average_latency_ms": 0
+    },
+    "deltas": {
+      "cost_per_successful_request_pct": -65.68,
+      "pass_rate_pct_points": 0,
+      "p95_latency_ms_pct": -100,
+      "fallback_rate_pct_points": 0
+    }
+  },
+  "confidence_interval_pct": {
+    "low": -92.89,
+    "high": -35.39
+  }
+}

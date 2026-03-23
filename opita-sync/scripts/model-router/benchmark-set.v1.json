@@ -1,0 +1,71 @@
+{
+  "dataset_version": "benchmark-set.v1",
+  "cases": [
+    {
+      "id": "case-001",
+      "task_type": "classification",
+      "input": "Classify this customer message into billing, support, or technical.",
+      "quality_profile": "standard",
+      "max_latency_ms": 2000,
+      "cost_mode": "aggressive",
+      "risk_level": "low",
+      "requires_tools": false,
+      "expected_min_chars": 48
+    },
+    {
+      "id": "case-002",
+      "task_type": "summarization",
+      "input": "Summarize the following incident report with key actions and owners: The API gateway returned intermittent 502 errors between 09:30 and 09:42 due to exhausted upstream connections.",
+      "quality_profile": "standard",
+      "max_latency_ms": 2500,
+      "cost_mode": "balanced",
+      "risk_level": "medium",
+      "requires_tools": false,
+      "expected_min_chars": 80
+    },
+    {
+      "id": "case-003",
+      "task_type": "analysis",
+      "input": "Analyze rollout risk and mitigation plan for changing auth token TTL from 24h to 2h for all mobile clients.",
+      "quality_profile": "strict",
+      "max_latency_ms": 3000,
+      "cost_mode": "balanced",
+      "risk_level": "high",
+      "requires_tools": false,
+      "expected_min_chars": 120
+    },
+    {
+      "id": "case-004",
+      "task_type": "extraction",
+      "input": "Extract environment variables and expected defaults from this text: API_URL=https://example.com; RETRY_MAX=3; FEATURE_X=true.",
+      "quality_profile": "standard",
+      "max_latency_ms": 1800,
+      "cost_mode": "aggressive",
+      "risk_level": "low",
+      "requires_tools": false,
+      "expected_min_chars": 60
+    },
+    {
+      "id": "case-005",
+      "task_type": "code_generation",
+      "input": "Generate a robust Node function that retries a fetch request with exponential backoff and timeout handling.",
+      "quality_profile": "strict",
+      "max_latency_ms": 3500,
+      "cost_mode": "balanced",
+      "risk_level": "high",
+      "requires_tools": false,
+      "expected_min_chars": 220
+    },
+    {
+      "id": "case-006",
+      "task_type": "analysis",
+      "input": "Evaluate whether we should migrate from monolith deploys to canary deploys given current incident profile and staffing constraints.",
+      "quality_profile": "standard",
+      "max_latency_ms": 2800,
+      "cost_mode": "balanced",
+      "risk_level": "medium",
+      "requires_tools": false,
+      "expected_min_chars": 140
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+model = "gpt-5.4"
+
+[profiles.codex_fast]
+model = "gpt-5-mini"
+model_reasoning_effort = "low"
+service_tier = "fast"
+
+[profiles.codex_balanced]
+model = "gpt-5.4"
+model_reasoning_effort = "medium"
+service_tier = "fast"
+
+[profiles.codex_deep]
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+service_tier = "fast"
+
+[mcp_servers.openaiDeveloperDocs]
+url = "https://developers.openai.com/mcp"
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["@playwright/mcp@latest"]
