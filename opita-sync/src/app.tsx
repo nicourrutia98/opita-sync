@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { AlertTriangle, Bot, BrainCircuit, CheckCircle2, Cog, Download, Filter, FolderKanban, LoaderCircle, MessageSquareText, Search, SendHorizontal, Settings2, ShieldAlert, Sparkles, Wrench } from "lucide-react";
 import { AppShell } from "./components/opita/app-shell";
 import { AuthShell } from "./components/opita/auth-shell";
 import { CaseCard } from "./components/opita/case-card";
+import { ChatWorkspace } from "./components/opita/chat/chat-workspace";
 import { MetricCard } from "./components/opita/metric-card";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
@@ -16,10 +17,8 @@ import { createOpitaAppServices } from "./services";
 import type { OpitaAppServices } from "./services/contracts";
 import {
   toAssistantConnectionStatusViewModel,
-  toAssistedDraftViewModel,
   toCaseDetailViewModel,
   toCaseSummaryViewModel,
-  toConversationViewModel,
   toDashboardViewModel,
   toDataReuseConsentViewModel,
   toGlobalGovernanceActionViewModel,
@@ -72,18 +71,17 @@ function ErrorState({ title, description, onRetry }: { title: string; descriptio
   );
 }
 
-function AuthCard({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+function AuthCard({ title, description, children }: { title?: string; description?: string; children: ReactNode }) {
   return (
-    <Card className="border-0 bg-transparent shadow-none">
-      <CardHeader className="px-0 pb-4 pt-0">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-subtle">Acceso</p>
-          <CardTitle className="mt-2 text-2xl tracking-[-0.02em]">{title}</CardTitle>
-          <p className="mt-2 text-sm leading-6 text-muted">{description}</p>
+    <div className="space-y-6">
+      {(title || description) && (
+        <div className="space-y-2">
+          {title ? <CardTitle className="text-xl tracking-[-0.02em]">{title}</CardTitle> : null}
+          {description ? <p className="text-sm leading-6 text-muted">{description}</p> : null}
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4 px-0 pb-0">{children}</CardContent>
-    </Card>
+      )}
+      <CardContent className="space-y-4 px-0 pb-0 pt-0">{children}</CardContent>
+    </div>
   );
 }
 
@@ -152,70 +150,6 @@ function ConfigMetric({
   );
 }
 
-type ActivityState = "thinking" | "reasoning" | "tool" | "ready";
-
-type ChatRenderItem =
-  | { id: string; kind: "user"; title: string; body: string }
-  | { id: string; kind: "assistant"; title: string; body: string }
-  | { id: string; kind: "activity"; label: string; body: string; state: ActivityState };
-
-function updateActivityItem(
-  items: ChatRenderItem[],
-  activityId: string,
-  next: { label: string; body: string; state: ActivityState }
-): ChatRenderItem[] {
-  return items.map((item) => {
-    if (item.id !== activityId || item.kind !== "activity") {
-      return item;
-    }
-
-    return {
-      ...item,
-      ...next
-    };
-  });
-}
-
-function mapConversationToRenderItems(messages: Array<{ id: string; tone: "user" | "assistant" | "system"; body: string }>): ChatRenderItem[] {
-  return messages.map((message) => {
-    if (message.tone === "user") {
-      return { id: message.id, kind: "user", title: "Usuario", body: message.body };
-    }
-
-    if (message.tone === "assistant") {
-      return { id: message.id, kind: "assistant", title: "Orquestador", body: message.body };
-    }
-
-    const tagged = message.body.match(/^\[\[activity:(thinking|reasoning|tool|ready)\]\]\s*(.*)$/i);
-    const normalized = message.body.toLowerCase();
-    const state = tagged?.[1]?.toLowerCase() as ActivityState | undefined;
-    const resolvedState =
-      state ??
-      (normalized.includes("herramient")
-        ? "tool"
-        : normalized.includes("confirm")
-          ? "ready"
-          : normalized.includes("context") || normalized.includes("razon")
-            ? "reasoning"
-            : "thinking");
-
-    const labelMap: Record<ActivityState, string> = {
-      thinking: "Pensando",
-      reasoning: "Razonando",
-      tool: "Usando herramienta",
-      ready: "Listo para ejecutar"
-    };
-
-    return {
-      id: message.id,
-      kind: "activity",
-      label: labelMap[resolvedState],
-      body: tagged?.[2] && tagged[2].trim().length ? tagged[2].trim() : message.body,
-      state: resolvedState
-    };
-  });
-}
-
 export function App({ initialView = "inicio", initialTheme = "light", services }: AppProps) {
   const [serviceLayer] = useState<OpitaAppServices>(() => services ?? createOpitaAppServices());
   const [theme, setTheme] = useState<ThemeMode>(initialTheme);
@@ -245,14 +179,6 @@ export function App({ initialView = "inicio", initialTheme = "light", services }
   const [parameterDrafts, setParameterDrafts] = useState<Record<string, string>>({});
   const [capabilityMutationBusyId, setCapabilityMutationBusyId] = useState<string | null>(null);
   const [capabilityMutationMessage, setCapabilityMutationMessage] = useState<{ tone: "success" | "error"; detail: string } | null>(null);
-  const [draftBusy, setDraftBusy] = useState(false);
-  const [draftMessage, setDraftMessage] = useState<{ tone: "success" | "error"; detail: string } | null>(null);
-  const [generatedDraft, setGeneratedDraft] = useState<ReturnType<typeof toAssistedDraftViewModel> | null>(null);
-  const [chatDraft, setChatDraft] = useState("");
-  const [localChatItems, setLocalChatItems] = useState<ChatRenderItem[]>([]);
-  const [liveConversation, setLiveConversation] = useState<ReturnType<typeof toConversationViewModel> | null>(null);
-  const [chatBusy, setChatBusy] = useState(false);
-  const [chatMutationMessage, setChatMutationMessage] = useState<{ tone: "success" | "error"; detail: string } | null>(null);
   const [usageBusy, setUsageBusy] = useState(false);
   const [usageMessage, setUsageMessage] = useState<{ tone: "success" | "error"; detail: string } | null>(null);
   const [governanceBusy, setGovernanceBusy] = useState(false);
@@ -263,8 +189,6 @@ export function App({ initialView = "inicio", initialTheme = "light", services }
   const [assistantConnectionMessage, setAssistantConnectionMessage] = useState<{ tone: "success" | "error"; detail: string } | null>(null);
   const [configSection, setConfigSection] = useState<ConfigSection>("general");
   const resetToken = useMemo(() => getResetToken(), []);
-  const chatFeedRef = useRef<HTMLDivElement | null>(null);
-  const chatTimerRefs = useRef<Array<ReturnType<typeof setTimeout>>>([]);
 
   const role = session?.bootstrap.role ?? "tecnico";
   const availableViews = session?.bootstrap.allowedViews ?? [];
@@ -302,7 +226,6 @@ export function App({ initialView = "inicio", initialTheme = "light", services }
   const loadDashboard = useCallback(() => serviceLayer.dashboardService.getDashboard(role), [role, serviceLayer]);
   const loadCases = useCallback(() => serviceLayer.caseService.listCases(), [serviceLayer]);
   const loadDetail = useCallback(() => serviceLayer.caseService.getCaseDetail(selectedCaseId), [selectedCaseId, serviceLayer]);
-  const loadConversation = useCallback(() => serviceLayer.chatService.getConversation(role, selectedCaseId), [role, selectedCaseId, serviceLayer]);
   const loadTenantConfig = useCallback(() => serviceLayer.tenantConfigService.getTenantConfig(), [serviceLayer]);
   const loadOperationalLog = useCallback(() => serviceLayer.operationalLogService.listEntries(selectedCaseId), [selectedCaseId, serviceLayer]);
   const loadCapabilities = useCallback(() => serviceLayer.capabilityService.listCapabilities(), [serviceLayer]);
@@ -318,7 +241,6 @@ export function App({ initialView = "inicio", initialTheme = "light", services }
   const dashboardResource = useAsyncResource(loadDashboard, [role], { enabled: resourceEnabled && view === "inicio" });
   const casesResource = useAsyncResource(loadCases, [], { enabled: resourceEnabled && (view === "casos" || view === "detalle") });
   const detailResource = useAsyncResource(loadDetail, [selectedCaseId], { enabled: resourceEnabled && view === "detalle" });
-  const chatResource = useAsyncResource(loadConversation, [role, selectedCaseId], { enabled: resourceEnabled && view === "chat" });
   const tenantConfigResource = useAsyncResource(loadTenantConfig, [], { enabled: resourceEnabled && view === "configuracion" });
   const operationalLogResource = useAsyncResource(loadOperationalLog, [selectedCaseId], { enabled: resourceEnabled && view === "detalle" });
   const capabilitiesResource = useAsyncResource(loadCapabilities, [], { enabled: resourceEnabled && view === "configuracion" });
@@ -332,9 +254,6 @@ export function App({ initialView = "inicio", initialTheme = "light", services }
 
   const dashboard = dashboardResource.data ? toDashboardViewModel(dashboardResource.data) : null;
   const detail = detailResource.data ? toCaseDetailViewModel(detailResource.data) : null;
-  const conversation = chatResource.data ? toConversationViewModel(chatResource.data) : null;
-  const effectiveConversation = liveConversation ?? conversation;
-  const chatItems = useMemo(() => (effectiveConversation ? [...mapConversationToRenderItems(effectiveConversation.messages), ...localChatItems] : localChatItems), [effectiveConversation, localChatItems]);
   const tenantConfig = tenantConfigResource.data ? toTenantConfigViewModel(tenantConfigResource.data) : null;
   const aiParameters = useMemo(() => tenantConfig?.parameters.filter((item) => item.key.startsWith("ai.")) ?? [], [tenantConfig]);
   const tenantParameters = useMemo(() => tenantConfig?.parameters.filter((item) => !item.key.startsWith("ai.")) ?? [], [tenantConfig]);
@@ -364,27 +283,6 @@ export function App({ initialView = "inicio", initialTheme = "light", services }
     setParameterDrafts(nextDrafts);
   }, [tenantConfig]);
 
-  useEffect(() => {
-    setLiveConversation(null);
-    setChatDraft(conversation?.promptDraft ?? "");
-    setLocalChatItems([]);
-    setChatMutationMessage(null);
-    chatTimerRefs.current.forEach((timer) => clearTimeout(timer));
-    chatTimerRefs.current = [];
-  }, [conversation?.promptDraft, selectedCaseId]);
-
-  useEffect(() => {
-    if (!chatFeedRef.current) {
-      return;
-    }
-    chatFeedRef.current.scrollTop = chatFeedRef.current.scrollHeight;
-  }, [chatItems]);
-
-  useEffect(() => () => {
-    chatTimerRefs.current.forEach((timer) => clearTimeout(timer));
-    chatTimerRefs.current = [];
-  }, []);
-
   const filteredCases = useMemo(() => {
     const base = (casesResource.data ?? []).map(toCaseSummaryViewModel);
     if (!query) {
@@ -411,7 +309,6 @@ export function App({ initialView = "inicio", initialTheme = "light", services }
       dashboardResource,
       casesResource,
       detailResource,
-      chatResource,
       tenantConfigResource,
       operationalLogResource,
       capabilitiesResource,
@@ -430,7 +327,6 @@ export function App({ initialView = "inicio", initialTheme = "light", services }
     dashboardResource.errorStatus,
     casesResource.errorStatus,
     detailResource.errorStatus,
-    chatResource.errorStatus,
     handleUnauthorized,
     tenantConfigResource.errorStatus,
     operationalLogResource.errorStatus,
@@ -610,86 +506,6 @@ export function App({ initialView = "inicio", initialTheme = "light", services }
     [capabilitiesResource, serviceLayer]
   );
 
-  const generateAssistedDraft = useCallback(async () => {
-    setDraftBusy(true);
-    setDraftMessage(null);
-    const activityId = `draft-activity-${Date.now()}`;
-
-    setLocalChatItems((current) => [
-      ...current,
-      {
-        id: activityId,
-        kind: "activity",
-        label: "Usando herramienta",
-        body: "Preparando el borrador y validando el contexto disponible antes de generarlo.",
-        state: "tool"
-      }
-    ]);
-
-    try {
-      const result = await serviceLayer.draftService.generateDraft({
-        caseId: selectedCaseId,
-        prompt: chatDraft.trim() || effectiveConversation?.promptDraft || "Generar borrador contextual para seguimiento operativo.",
-        channel: "interno",
-        tone: "Operativo formal"
-      });
-      setGeneratedDraft(toAssistedDraftViewModel(result));
-      setDraftMessage({
-        tone: "success",
-        detail: `Borrador generado con auditoria ${result.auditId}.`
-      });
-      setLocalChatItems((current) =>
-        updateActivityItem(current, activityId, {
-          label: "Listo para ejecutar",
-          body: "El orquestador termino la generacion del borrador y dejo el resultado disponible para revisar.",
-          state: "ready"
-        })
-      );
-    } catch (error) {
-      setDraftMessage({
-        tone: "error",
-        detail: error instanceof Error ? error.message : "No se pudo generar el borrador asistido."
-      });
-      setLocalChatItems((current) =>
-        updateActivityItem(current, activityId, {
-          label: "Razonando",
-          body: error instanceof Error ? error.message : "El orquestador no pudo completar la herramienta solicitada.",
-          state: "reasoning"
-        })
-      );
-    } finally {
-      setDraftBusy(false);
-    }
-  }, [chatDraft, effectiveConversation?.promptDraft, selectedCaseId, serviceLayer]);
-
-  const sendChatMessage = useCallback(async () => {
-    const nextMessage = chatDraft.trim();
-    if (!nextMessage) {
-      return;
-    }
-    setChatBusy(true);
-    setChatMutationMessage(null);
-    setChatDraft("");
-
-    try {
-      const result = await serviceLayer.chatService.sendMessage({
-        role,
-        caseId: selectedCaseId,
-        message: nextMessage
-      });
-      setLiveConversation(toConversationViewModel(result));
-      setLocalChatItems([]);
-    } catch (error) {
-      setChatDraft(nextMessage);
-      setChatMutationMessage({
-        tone: "error",
-        detail: error instanceof Error ? error.message : "No se pudo enviar el mensaje al orquestador."
-      });
-    } finally {
-      setChatBusy(false);
-    }
-  }, [chatDraft, role, selectedCaseId, serviceLayer]);
-
   const exportUsageForBilling = useCallback(async () => {
     setUsageBusy(true);
     setUsageMessage(null);
@@ -817,26 +633,62 @@ export function App({ initialView = "inicio", initialTheme = "light", services }
     return (
       <AuthShell
         theme={theme}
-        title="Accede a tu workspace"
-        description="Ingresa con tu correo y contrasena para continuar."
+        title={
+          authScreen === "requestReset"
+            ? "Recupera tu acceso"
+            : authScreen === "resetPassword"
+              ? "Restablece tu contraseña"
+              : "Iniciar sesión"
+        }
+        description={
+          authScreen === "requestReset"
+            ? "Ingresa tu correo corporativo y te enviaremos las instrucciones para restablecer tu contraseña."
+            : authScreen === "resetPassword"
+              ? "Define una nueva contraseña para volver a ingresar de forma segura."
+              : "Accede a Opita Sync con tus credenciales corporativas."
+        }
         status={authMessage}
       >
         {authScreen === "signIn" && (
-          <AuthCard title="Iniciar sesion" description="Usa tus credenciales para entrar a tu espacio.">
-            <form className="space-y-4" onSubmit={signIn}>
-              <Input className="h-12" type="email" placeholder="correo@empresa.com" value={email} onChange={(event) => setEmail(event.target.value)} />
-              <Input className="h-12" type="password" placeholder="Contrasena" value={password} onChange={(event) => setPassword(event.target.value)} />
-              <Button type="submit" className="h-12 w-full" disabled={authBusy}>
-                {authBusy ? "Ingresando..." : "Entrar"}
+          <AuthCard>
+            <form className="space-y-5" onSubmit={signIn}>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-ink" htmlFor="sign-in-email">
+                  Correo corporativo
+                </label>
+                <Input
+                  id="sign-in-email"
+                  className="h-14 rounded-[20px] bg-white/90 px-4 text-[15px]"
+                  type="email"
+                  placeholder="correo@empresa.com"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-ink" htmlFor="sign-in-password">
+                  Contraseña
+                </label>
+                <Input
+                  id="sign-in-password"
+                  className="h-14 rounded-[20px] bg-white/90 px-4 text-[15px]"
+                  type="password"
+                  placeholder="Ingresa tu contraseña"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+              </div>
+              <Button type="submit" className="h-14 w-full rounded-[20px] text-[15px]" disabled={authBusy}>
+                {authBusy ? "Iniciando sesión..." : "Iniciar sesión"}
               </Button>
             </form>
-            <div className="flex flex-col gap-2 pt-1">
-              <Button variant="ghost" className="h-10 w-full justify-center" onClick={() => setAuthScreen("requestReset")}>
-                Olvide mi contrasena
+            <div className="space-y-2 pt-1">
+              <Button variant="ghost" type="button" className="h-11 w-full justify-center rounded-[18px] text-sm" onClick={() => setAuthScreen("requestReset")}>
+                Olvidé mi contraseña
               </Button>
               {resetToken && (
-                <Button variant="ghost" className="h-10 w-full justify-center" onClick={() => setAuthScreen("resetPassword")}>
-                  Tengo codigo de acceso
+                <Button variant="ghost" type="button" className="h-11 w-full justify-center rounded-[18px] text-sm" onClick={() => setAuthScreen("resetPassword")}>
+                  Tengo código de acceso
                 </Button>
               )}
             </div>
@@ -844,34 +696,63 @@ export function App({ initialView = "inicio", initialTheme = "light", services }
         )}
 
         {authScreen === "requestReset" && (
-          <AuthCard title="Recuperar acceso" description="Te enviaremos el flujo para renovar tu contrasena.">
-            <form className="space-y-4" onSubmit={requestReset}>
-              <Input className="h-12" type="email" placeholder="correo@empresa.com" value={resetEmail} onChange={(event) => setResetEmail(event.target.value)} />
-              <Button type="submit" className="h-12 w-full" disabled={authBusy}>
+          <AuthCard>
+            <form className="space-y-5" onSubmit={requestReset}>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-ink" htmlFor="reset-email">
+                  Correo corporativo
+                </label>
+                <Input
+                  id="reset-email"
+                  className="h-14 rounded-[20px] bg-white/90 px-4 text-[15px]"
+                  type="email"
+                  placeholder="correo@empresa.com"
+                  value={resetEmail}
+                  onChange={(event) => setResetEmail(event.target.value)}
+                />
+              </div>
+              <Button type="submit" className="h-14 w-full rounded-[20px] text-[15px]" disabled={authBusy}>
                 {authBusy ? "Solicitando..." : "Enviar enlace"}
               </Button>
             </form>
-            <Button variant="ghost" className="h-10 w-full justify-center" onClick={() => setAuthScreen("signIn")}>
-              Volver a iniciar sesion
+            <Button variant="ghost" type="button" className="h-11 w-full justify-center rounded-[18px] text-sm" onClick={() => setAuthScreen("signIn")}>
+              Volver a iniciar sesión
             </Button>
           </AuthCard>
         )}
 
         {authScreen === "resetPassword" && (
-          <AuthCard title="Restablecer contrasena" description="Define una nueva contrasena para recuperar el acceso.">
+          <AuthCard>
             {!resetToken ? (
-              <StateBlock tone="error" title="Falta el codigo de acceso" description="Agrega `?resetToken=...` a la URL para completar este flujo." />
+              <StateBlock tone="error" title="Falta el código de acceso" description="Agrega `?resetToken=...` a la URL para completar este flujo." />
             ) : (
-              <form className="space-y-4" onSubmit={confirmReset}>
-                <Input className="h-12" value={resetToken} readOnly aria-label="Codigo de acceso" />
-                <Input className="h-12" type="password" placeholder="Nueva contrasena" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
-                <Button type="submit" className="h-12 w-full" disabled={authBusy}>
-                  {authBusy ? "Actualizando..." : "Actualizar contrasena"}
+              <form className="space-y-5" onSubmit={confirmReset}>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-ink" htmlFor="reset-token">
+                    Código de acceso
+                  </label>
+                  <Input id="reset-token" className="h-14 rounded-[20px] bg-white/80 px-4 text-[15px]" value={resetToken} readOnly aria-label="Código de acceso" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-ink" htmlFor="new-password">
+                    Contraseña
+                  </label>
+                  <Input
+                    id="new-password"
+                    className="h-14 rounded-[20px] bg-white/90 px-4 text-[15px]"
+                    type="password"
+                    placeholder="Define tu nueva contraseña"
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                  />
+                </div>
+                <Button type="submit" className="h-14 w-full rounded-[20px] text-[15px]" disabled={authBusy}>
+                  {authBusy ? "Actualizando..." : "Actualizar contraseña"}
                 </Button>
               </form>
             )}
-            <Button variant="ghost" className="h-10 w-full justify-center" onClick={() => setAuthScreen("signIn")}>
-              Volver a iniciar sesion
+            <Button variant="ghost" type="button" className="h-11 w-full justify-center rounded-[18px] text-sm" onClick={() => setAuthScreen("signIn")}>
+              Volver a iniciar sesión
             </Button>
           </AuthCard>
         )}
@@ -1123,196 +1004,7 @@ export function App({ initialView = "inicio", initialTheme = "light", services }
         )}
 
         {view === "chat" && (
-          <section className="flex min-h-0 flex-1 flex-col gap-4">
-            <div className="rounded-[28px] border border-line/90 bg-panel/95 p-4 shadow-[0_12px_26px_rgba(15,23,42,0.05)] md:hidden">
-              <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-subtle">Chat / Orchestrator</p>
-              <p className="mt-2 text-base font-semibold tracking-tight text-ink">Conversacion y accion sin ruido.</p>
-              <div className="mt-3 flex gap-2">
-                <Button size="sm" className="flex-1">
-                  Confirmar y ejecutar
-                </Button>
-                <Button size="sm" variant="secondary" className="flex-1">
-                  Guardar sugerencia
-                </Button>
-              </div>
-            </div>
-
-            <div className="hidden rounded-[20px] border border-line/90 bg-panel/95 px-4 py-3 shadow-[0_12px_26px_rgba(15,23,42,0.05)] md:flex md:items-center md:justify-between">
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-subtle">Chat / Orchestrator</p>
-                <p className="mt-1 text-base font-semibold text-ink">Conversacion y accion en una sola superficie.</p>
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm">Confirmar y ejecutar</Button>
-                <Button size="sm" variant="secondary">Guardar sugerencia</Button>
-              </div>
-            </div>
-
-            <div className="flex min-h-0 flex-1 flex-col gap-5 xl:grid xl:grid-cols-[minmax(0,1fr)_360px]">
-            <Card className="flex min-h-0 flex-1 flex-col overflow-hidden shadow-none md:rounded-[24px] md:border md:border-line/90 md:bg-panel md:p-0 md:shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
-              <CardHeader className="shrink-0 border-b border-line/80 pb-4">
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-subtle">Hilo principal</p>
-                  <CardTitle className="mt-2">{effectiveConversation?.title ?? "Intencion operativa con contexto"}</CardTitle>
-                </div>
-                <MessageSquareText className="h-5 w-5 text-muted" />
-              </CardHeader>
-              <CardContent className="flex min-h-0 flex-1 flex-col gap-3">
-                {chatResource.status === "loading" && <StateBlock tone="loading" title="Preparando contexto" description="El sistema esta reuniendo el caso y las ayudas disponibles antes de continuar." />}
-                {chatResource.status === "error" && (
-                  <ErrorState title={chatResource.errorStatus === 403 ? "Acceso denegado" : "No se pudo reconstruir la conversacion"} description={chatResource.error ?? "La conversacion no se pudo cargar."} onRetry={chatResource.retry} />
-                )}
-                {chatResource.status === "ready" && conversation && (
-                  <>
-                    <div ref={chatFeedRef} className="scrollbar-opita flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
-                      {chatItems.map((item) => {
-                        if (item.kind === "activity") {
-                          const activityIcon =
-                            item.state === "tool" ? (
-                              <Cog className="h-4 w-4" />
-                            ) : item.state === "reasoning" ? (
-                              <BrainCircuit className="h-4 w-4" />
-                            ) : item.state === "ready" ? (
-                              <CheckCircle2 className="h-4 w-4" />
-                            ) : (
-                              <LoaderCircle className="h-4 w-4 animate-spin" />
-                            );
-
-                          return (
-                            <div key={item.id} className="mr-auto max-w-[72%] rounded-[22px] border border-line/80 bg-panel px-4 py-3 text-sm text-subtle">
-                              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand-strong">
-                                {activityIcon}
-                                {item.label}
-                              </div>
-                              <p className="mt-2 leading-6">{item.body}</p>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div key={item.id} className={item.kind === "assistant" ? "mr-auto max-w-[74%]" : "ml-auto max-w-[68%]"}>
-                            <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-subtle">{item.title}</div>
-                            <div
-                              className={
-                                item.kind === "assistant"
-                                  ? "rounded-[26px] rounded-tl-[10px] border border-brand/20 bg-brand px-5 py-4 text-sm leading-6 text-white"
-                                  : "rounded-[26px] rounded-tr-[10px] border border-line/80 bg-surface px-5 py-4 text-sm leading-6 text-ink"
-                              }
-                            >
-                              {item.body}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <DisclosureBlock
-                      title="Asistencia y auditoria"
-                      summary="Genera un borrador asistido y revisa el resultado sin sacar el foco del hilo principal."
-                    >
-                      {draftMessage && (
-                        <StateBlock
-                          tone={draftMessage.tone === "success" ? "success" : "error"}
-                          title={draftMessage.tone === "success" ? "Borrador generado" : "No se pudo generar borrador"}
-                          description={draftMessage.detail}
-                        />
-                      )}
-                      <Button className="w-full" size="sm" variant="secondary" disabled={draftBusy} onClick={() => void generateAssistedDraft()}>
-                        {draftBusy ? "Generando..." : "Generar borrador asistido"}
-                      </Button>
-                      {generatedDraft && (
-                        <div className="rounded-[28px] border border-line/80 bg-panel p-4 text-sm text-muted">
-                          <p className="font-semibold text-ink">Borrador {generatedDraft.channel}</p>
-                          <p className="mt-2">{generatedDraft.content}</p>
-                          <p className="mt-2 text-xs uppercase tracking-[0.12em] text-subtle">
-                            {generatedDraft.status === "pending_approval" ? "Pendiente aprobacion" : "Listo"} - Audit {generatedDraft.auditId}
-                          </p>
-                        </div>
-                      )}
-                    </DisclosureBlock>
-
-                    <div className="shrink-0 border-t border-line/80 pt-3">
-                      {chatMutationMessage && (
-                        <div className="mb-3">
-                          <StateBlock
-                            tone={chatMutationMessage.tone === "success" ? "success" : "error"}
-                            title={chatMutationMessage.tone === "success" ? "Mensaje enviado" : "No se pudo enviar el mensaje"}
-                            description={chatMutationMessage.detail}
-                          />
-                        </div>
-                      )}
-                      <div className="flex items-end gap-3">
-                        <Textarea
-                          autoGrow
-                          maxHeight={96}
-                          className="scrollbar-opita min-h-16 max-h-24 resize-none overflow-y-auto"
-                          value={chatDraft}
-                          onChange={(event) => setChatDraft(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" && !event.shiftKey && !chatBusy) {
-                              event.preventDefault();
-                              void sendChatMessage();
-                            }
-                          }}
-                          disabled={chatBusy}
-                        />
-                        <Button size="sm" className="h-12 shrink-0 px-4" onClick={() => void sendChatMessage()} disabled={!chatDraft.trim() || chatBusy}>
-                          <SendHorizontal className="h-4 w-4" />
-                          {chatBusy ? "Enviando..." : "Enviar"}
-                        </Button>
-                      </div>
-                      <p className="mt-2 text-xs leading-5 text-muted">Enter envia. Shift + Enter agrega salto de linea. El composer crece en altura sin mover el viewport.</p>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            <div className="hidden min-h-0 gap-5 xl:flex xl:flex-col xl:overflow-hidden">
-              <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                <CardHeader className="shrink-0 border-b border-line/80 pb-4">
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-subtle">Actividad del orquestador</p>
-                    <CardTitle className="mt-2">Estados y contexto</CardTitle>
-                  </div>
-                  <Search className="h-5 w-5 text-muted" />
-                </CardHeader>
-                <CardContent className="scrollbar-opita min-h-0 flex-1 space-y-4 overflow-y-auto">
-                  <div className="rounded-[24px] border border-line/80 bg-surface/80 p-4 text-sm text-muted">
-                    <p className="font-semibold text-ink">Secuencia visible</p>
-                    <p className="mt-2">Cada turno puede mostrar estados tecnicos del orquestador antes de entregar la respuesta final.</p>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="rounded-[22px] border border-line/80 bg-panel p-4 text-sm text-muted">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand-strong">
-                        <LoaderCircle className="h-4 w-4 animate-spin" />
-                        Pensando
-                      </div>
-                      <p className="mt-2">Analizando el pedido y el contexto del caso.</p>
-                    </div>
-                    <div className="rounded-[22px] border border-line/80 bg-panel p-4 text-sm text-muted">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand-strong">
-                        <BrainCircuit className="h-4 w-4" />
-                        Razonando
-                      </div>
-                      <p className="mt-2">Resolviendo la mejor accion disponible segun el estado actual.</p>
-                    </div>
-                    <div className="rounded-[22px] border border-line/80 bg-panel p-4 text-sm text-muted">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand-strong">
-                        <Cog className="h-4 w-4" />
-                        Usando herramienta
-                      </div>
-                      <p className="mt-2">Consultando datos, generando borradores o ejecutando pasos auditables.</p>
-                    </div>
-                  </div>
-                  <DisclosureBlock title="Criterio de foco" summary="La respuesta visible se separa claramente del estado interno del orquestador.">
-                    <p className="text-sm leading-6 text-muted">El lado izquierdo concentra actividad y respuesta del orquestador; el lado derecho mantiene el rastro claro del usuario.</p>
-                  </DisclosureBlock>
-                </CardContent>
-              </Card>
-            </div>
-            </div>
-          </section>
+          <ChatWorkspace services={serviceLayer} selectedCaseId={selectedCaseId} />
         )}
 
         {view === "casos" && (

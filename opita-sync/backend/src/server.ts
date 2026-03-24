@@ -1,4 +1,7 @@
+import { loadRootEnv } from "./load-root-env.js";
 import { buildApp } from "./app.js";
+
+loadRootEnv();
 
 const port = Number(process.env.PORT ?? "4000");
 const host = process.env.HOST ?? "0.0.0.0";

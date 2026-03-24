@@ -1,7 +1,10 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient, RoleKey, PolicyMode, ToolRiskLevel, ToolCertificationState, CasePriority, CaseStatus } from "@prisma/client";
+import { loadRootEnv } from "../src/load-root-env.ts";
 
 const prisma = new PrismaClient();
+
+loadRootEnv();
 
 const config = {
   tenantSlug: process.env.OPITA_PROVISION_TENANT_SLUG ?? "tenant-local-real",
@@ -9,10 +12,10 @@ const config = {
   adminName: process.env.OPITA_PROVISION_ADMIN_NAME ?? "Admin Local",
   adminEmail: (process.env.OPITA_PROVISION_ADMIN_EMAIL ?? "admin@local.opita.test").toLowerCase(),
   adminPassword: process.env.OPITA_PROVISION_ADMIN_PASSWORD ?? "Admin1234!",
-  aiProvider: process.env.OPITA_PROVISION_AI_PROVIDER ?? "openai",
-  aiBaseUrl: process.env.OPITA_PROVISION_AI_BASE_URL ?? "https://api.openai.com/v1",
+  aiProvider: process.env.OPITA_PROVISION_AI_PROVIDER ?? "gemini",
+  aiBaseUrl: process.env.OPITA_PROVISION_AI_BASE_URL ?? "https://generativelanguage.googleapis.com/v1beta",
   aiApiKey: process.env.OPITA_PROVISION_AI_API_KEY ?? "",
-  aiModel: process.env.OPITA_PROVISION_AI_MODEL ?? "gpt-4.1-mini"
+  aiModel: process.env.OPITA_PROVISION_AI_MODEL ?? "gemini-2.5-flash"
 };
 
 async function ensureRole(key, label) {
@@ -45,6 +48,41 @@ async function ensureTool(key, name, riskLevel, certification, environment, maxP
     update: { name, riskLevel, certification, environment, maxPolicyMode, active: true },
     create: { key, name, riskLevel, certification, environment, maxPolicyMode, active: true }
   });
+}
+
+async function ensureBootstrapConversation({ tenantId, userId, userName, caseId, caseCode }) {
+  const existing = await prisma.conversation.findFirst({
+    where: { tenantId, userId },
+    orderBy: { updatedAt: "desc" }
+  });
+
+  if (existing) {
+    return existing;
+  }
+
+  const conversation = await prisma.conversation.create({
+    data: {
+      tenantId,
+      caseId: caseId ?? null,
+      userId,
+      title: caseCode ? `${caseCode} · Orquestador Opita` : "Orquestador Opita Sync",
+      promptDraft: caseCode
+        ? `Necesito apoyo operativo sobre ${caseCode}.`
+        : "Necesito ayuda para continuar mi turno operativo."
+    }
+  });
+
+  await prisma.conversationMessage.create({
+    data: {
+      tenantId,
+      conversationId: conversation.id,
+      authorId: null,
+      tone: "assistant",
+      body: `Hola ${userName}. Ya dejé listo tu hilo operativo con Gemini para que puedas escribir apenas entres.`
+    }
+  });
+
+  return conversation;
 }
 
 async function main() {
@@ -225,6 +263,14 @@ async function main() {
       caseId: seededCase.id,
       userId: adminUser.id
     }
+  });
+
+  await ensureBootstrapConversation({
+    tenantId: tenant.id,
+    userId: adminUser.id,
+    userName: config.adminName,
+    caseId: seededCase.id,
+    caseCode: "CAS-2048"
   });
 
   await Promise.all([

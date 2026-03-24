@@ -3,9 +3,10 @@ import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
-import { PrismaClient, RoleKey, MessageTone, CaseStatus, PolicyMode, GovernanceActionStatus } from "@prisma/client";
+import { PrismaClient, RoleKey, MessageTone, CaseStatus, PolicyMode, GovernanceActionStatus, AssistantRunStatus, AssistantRunPhase } from "@prisma/client";
 import { z } from "zod";
 import { AssistantProviderError, runAssistantTurn, testTenantAssistantConnection } from "./assistant-provider.js";
+import { buildConversationAutotitle, buildInitialConversationTitle, buildInitialPromptDraft, buildToolEventId, isPlaceholderConversationTitle } from "./chat-helpers.js";
 
 const prisma = new PrismaClient();
 
@@ -85,12 +86,173 @@ async function audit(tenantId: string, actorUserId: string | null, module: strin
   });
 }
 
-function serializeConversationMessage(message: { id: string; tone: MessageTone; body: string }) {
+const activeRunControllers = new Map<string, AbortController>();
+
+function serializeConversationMessage(message: { id: string; conversationId: string; tone: MessageTone; body: string; createdAt: Date; runId?: string | null }) {
   return {
     id: message.id,
-    tone: message.tone as "user" | "assistant" | "system",
-    body: message.body
+    conversationId: message.conversationId,
+    role: message.tone as "user" | "assistant" | "system",
+    content: message.body,
+    createdAt: message.createdAt.toISOString(),
+    runId: message.runId ?? undefined
   };
+}
+
+function serializeConversation(message: { id: string; title: string; caseId: string | null; promptDraft: string; updatedAt: Date; archivedAt?: Date | null; createdAt?: Date }) {
+  return {
+    id: message.id,
+    title: message.title,
+    caseId: message.caseId ?? undefined,
+    promptDraft: message.promptDraft,
+    updatedAt: message.updatedAt.toISOString(),
+    archivedAt: message.archivedAt?.toISOString() ?? undefined,
+    createdAt: message.createdAt?.toISOString()
+  };
+}
+
+async function findPreferredConversationCase(tenantId: string, userId: string, caseCode?: string | null) {
+  if (caseCode) {
+    const explicitCase = await prisma.case.findFirst({
+      where: { tenantId, code: caseCode }
+    });
+    if (explicitCase) {
+      return explicitCase;
+    }
+  }
+
+  const assignedCase = await prisma.case.findFirst({
+    where: { tenantId, assignments: { some: { userId } } },
+    orderBy: { updatedAt: "desc" }
+  });
+  if (assignedCase) {
+    return assignedCase;
+  }
+
+  return prisma.case.findFirst({
+    where: { tenantId },
+    orderBy: { updatedAt: "desc" }
+  });
+}
+
+async function ensureUserConversation(tenantId: string, userId: string, caseCode?: string | null) {
+  const where = caseCode
+    ? { tenantId, userId, case: { code: caseCode } }
+    : { tenantId, userId };
+  const existing = await prisma.conversation.findFirst({
+    where,
+    orderBy: { updatedAt: "desc" }
+  });
+
+  if (existing) {
+    return existing;
+  }
+
+  const caseRow = await findPreferredConversationCase(tenantId, userId, caseCode);
+  const conversation = await prisma.conversation.create({
+    data: {
+      tenantId,
+      caseId: caseRow?.id ?? null,
+      userId,
+      title: buildInitialConversationTitle(caseRow?.code),
+      promptDraft: buildInitialPromptDraft(caseRow?.code)
+    }
+  });
+
+  await prisma.conversationMessage.create({
+    data: {
+      tenantId,
+      conversationId: conversation.id,
+      authorId: null,
+      tone: MessageTone.assistant,
+      body: caseRow
+        ? `Ya dejé listo tu hilo para trabajar sobre ${caseRow.code}. Contame qué necesitás resolver.`
+        : "Ya dejé listo tu hilo operativo. Contame qué necesitás resolver."
+    }
+  });
+
+  return conversation;
+}
+
+async function createConversationRecord(tenantId: string, userId: string, caseCode?: string | null) {
+  const caseRow = await findPreferredConversationCase(tenantId, userId, caseCode);
+  return prisma.conversation.create({
+    data: {
+      tenantId,
+      caseId: caseRow?.id ?? null,
+      userId,
+      title: buildInitialConversationTitle(caseRow?.code),
+      promptDraft: buildInitialPromptDraft(caseRow?.code)
+    }
+  });
+}
+
+async function getConversationSummaryById(tenantId: string, userId: string, conversationId: string) {
+  const conversation = await prisma.conversation.findFirst({
+    where: { id: conversationId, tenantId, userId },
+    include: {
+      messages: { orderBy: { createdAt: "desc" }, take: 6 },
+      runs: { orderBy: { updatedAt: "desc" }, take: 1 }
+    }
+  });
+  return conversation ? serializeConversationSummary(conversation) : null;
+}
+
+function serializeConversationSummary(conversation: {
+  id: string;
+  title: string;
+  caseId: string | null;
+  updatedAt: Date;
+  archivedAt?: Date | null;
+  createdAt?: Date;
+  messages: Array<{ tone: MessageTone; body: string }>;
+  runs?: Array<{ status: AssistantRunStatus }>;
+}) {
+  const lastVisibleMessage = [...conversation.messages].reverse().find((item) => item.tone !== MessageTone.system);
+  return {
+    id: conversation.id,
+    title: conversation.title,
+    caseId: conversation.caseId ?? undefined,
+    lastMessagePreview: lastVisibleMessage?.body ?? "Sin mensajes todavia.",
+    updatedAt: conversation.updatedAt.toISOString(),
+    status: conversation.runs?.[0]?.status ?? AssistantRunStatus.completed,
+    archivedAt: conversation.archivedAt?.toISOString() ?? undefined,
+    createdAt: conversation.createdAt?.toISOString()
+  };
+}
+
+function encodeMessageCursor(message: { createdAt: Date; id: string }) {
+  return `${message.createdAt.toISOString()}:${message.id}`;
+}
+
+function decodeMessageCursor(cursor?: string) {
+  if (!cursor) {
+    return null;
+  }
+  const divider = cursor.lastIndexOf(":");
+  if (divider === -1) {
+    return null;
+  }
+  return {
+    createdAt: cursor.slice(0, divider),
+    id: cursor.slice(divider + 1)
+  };
+}
+
+function chunkText(text: string, chunkSize = 42) {
+  const chunks: string[] = [];
+  for (let index = 0; index < text.length; index += chunkSize) {
+    chunks.push(text.slice(index, index + chunkSize));
+  }
+  return chunks.length ? chunks : [text];
+}
+
+async function writeNdjson(reply: FastifyReply, payload: unknown) {
+  reply.raw.write(`${JSON.stringify(payload)}\n`);
+}
+
+async function sleep(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function buildApp(): Promise<FastifyInstance> {
@@ -301,53 +463,152 @@ export async function buildApp(): Promise<FastifyInstance> {
     };
   });
 
-  app.get("/chat/conversation", { preHandler: [requireAuth] }, async (request) => {
-    const query = request.query as { caseId?: string };
-    const base = await prisma.conversation.findFirst({
+  app.get("/conversations", { preHandler: [requireAuth] }, async (request) => {
+    const query = request.query as { limit?: string; includeArchived?: string };
+    const limit = Math.min(Number(query.limit ?? "20") || 20, 50);
+    const includeArchived = query.includeArchived === "true";
+    const conversations = await prisma.conversation.findMany({
       where: {
         tenantId: request.auth!.tenantId,
         userId: request.auth!.userId,
-        ...(query.caseId ? { case: { code: query.caseId } } : { caseId: null })
+        ...(includeArchived ? {} : { archivedAt: null })
       },
-      include: { messages: { orderBy: { createdAt: "asc" } } }
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+      take: limit,
+      include: {
+        messages: { orderBy: { createdAt: "desc" }, take: 6 },
+        runs: { orderBy: { updatedAt: "desc" }, take: 1 }
+      }
     });
-    return {
-      title: base?.title ?? "Conversacion operativa",
-      promptDraft: base?.promptDraft ?? "Solicita la accion requerida por el caso.",
-      messages: (base?.messages ?? []).map(serializeConversationMessage)
-    };
+
+    return conversations.map(serializeConversationSummary);
   });
 
-  app.post("/chat/message", { preHandler: [requireAuth] }, async (request, reply) => {
+  app.post("/conversations", { preHandler: [requireAuth] }, async (request, reply) => {
     try {
-      const body = z.object({ caseId: z.string().optional(), message: z.string().min(1) }).parse(request.body);
-      const tenantId = request.auth!.tenantId;
-      const userId = request.auth!.userId;
-      const caseRow = body.caseId ? await prisma.case.findFirst({ where: { tenantId, code: body.caseId } }) : null;
+      const body = z.object({ caseId: z.string().optional() }).optional().parse(request.body ?? {});
+      const conversation = await createConversationRecord(request.auth!.tenantId, request.auth!.userId, body?.caseId ?? null);
+      const summary = await getConversationSummaryById(request.auth!.tenantId, request.auth!.userId, conversation.id);
+      if (!summary) {
+        return reply.status(500).send({ code: "internal_error" });
+      }
+      return summary;
+    } catch (error) {
+      return mapError(reply, error);
+    }
+  });
 
-      if (body.caseId && !caseRow) {
+  app.patch("/conversations/:id", { preHandler: [requireAuth] }, async (request, reply) => {
+    try {
+      const params = request.params as { id: string };
+      const body = z
+        .object({
+          title: z.string().min(1).max(80).optional(),
+          archived: z.boolean().optional()
+        })
+        .refine((value) => value.title !== undefined || value.archived !== undefined, { message: "Debes enviar al menos un cambio." })
+        .parse(request.body ?? {});
+      const conversation = await prisma.conversation.findFirst({
+        where: { id: params.id, tenantId: request.auth!.tenantId, userId: request.auth!.userId }
+      });
+      if (!conversation) {
         return reply.status(404).send({ code: "not_found" });
       }
 
-      const conversation =
-        (await prisma.conversation.findFirst({
-          where: {
-            tenantId,
-            userId,
-            ...(caseRow ? { caseId: caseRow.id } : { caseId: null })
-          },
-          include: { messages: { orderBy: { createdAt: "asc" } } }
-        })) ??
-        (await prisma.conversation.create({
-          data: {
-            tenantId,
-            userId,
-            caseId: caseRow?.id,
-            title: caseRow ? `Conversacion ${caseRow.code}` : "Conversacion operativa",
-            promptDraft: caseRow ? `Ayudame a continuar con ${caseRow.code}.` : "Solicita la accion requerida por el caso."
-          },
-          include: { messages: { orderBy: { createdAt: "asc" } } }
-        }));
+      await prisma.conversation.update({
+        where: { id: conversation.id },
+        data: {
+          ...(body.title ? { title: body.title.trim() } : {}),
+          ...(body.archived !== undefined ? { archivedAt: body.archived ? new Date() : null } : {}),
+          updatedAt: new Date()
+        }
+      });
+
+      const summary = await getConversationSummaryById(request.auth!.tenantId, request.auth!.userId, conversation.id);
+      if (!summary) {
+        return reply.status(404).send({ code: "not_found" });
+      }
+      return summary;
+    } catch (error) {
+      return mapError(reply, error);
+    }
+  });
+
+  app.post("/conversations/bootstrap", { preHandler: [requireAuth] }, async (request, reply) => {
+    try {
+      const body = z.object({ caseId: z.string().optional() }).optional().parse(request.body ?? {});
+      const conversation = await ensureUserConversation(request.auth!.tenantId, request.auth!.userId, body?.caseId ?? null);
+      return serializeConversation(conversation);
+    } catch (error) {
+      return mapError(reply, error);
+    }
+  });
+
+  app.get("/conversations/:id/messages", { preHandler: [requireAuth] }, async (request, reply) => {
+    const params = request.params as { id: string };
+    const query = request.query as { before?: string; limit?: string };
+    const limit = Math.min(Number(query.limit ?? "30") || 30, 100);
+    const cursor = decodeMessageCursor(query.before);
+    const conversation = await prisma.conversation.findFirst({
+      where: { id: params.id, tenantId: request.auth!.tenantId, userId: request.auth!.userId }
+    });
+    if (!conversation) {
+      return reply.status(404).send({ code: "not_found" });
+    }
+    const messages = await prisma.conversationMessage.findMany({
+      where: {
+        tenantId: request.auth!.tenantId,
+        conversationId: params.id,
+        tone: { in: [MessageTone.user, MessageTone.assistant] },
+        ...(cursor
+          ? {
+              OR: [
+                { createdAt: { lt: new Date(cursor.createdAt) } },
+                {
+                  createdAt: new Date(cursor.createdAt),
+                  id: { lt: cursor.id }
+                }
+              ]
+            }
+          : {})
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: limit + 1
+    });
+    const hasMoreBefore = messages.length > limit;
+    const slice = hasMoreBefore ? messages.slice(0, limit) : messages;
+    const chronological = [...slice].reverse();
+    const previousAnchor = messages[limit];
+    return {
+      items: chronological.map(serializeConversationMessage),
+      prevCursor: previousAnchor ? encodeMessageCursor(previousAnchor) : null,
+      hasMoreBefore
+    };
+  });
+
+  app.post("/conversations/:id/messages", { preHandler: [requireAuth] }, async (request, reply) => {
+    try {
+      const params = request.params as { id: string };
+      const body = z.object({
+        content: z.string().min(1),
+        attachments: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
+        metadata: z.record(z.string()).optional()
+      }).parse(request.body);
+      const tenantId = request.auth!.tenantId;
+      const userId = request.auth!.userId;
+      const conversation = await prisma.conversation.findFirst({
+        where: { id: params.id, tenantId, userId }
+      });
+      if (!conversation) {
+        return reply.status(404).send({ code: "not_found" });
+      }
+      const activeRun = await prisma.assistantRun.findFirst({
+        where: { tenantId, conversationId: conversation.id, status: { in: [AssistantRunStatus.queued, AssistantRunStatus.running] } },
+        orderBy: { createdAt: "desc" }
+      });
+      if (activeRun) {
+        return reply.status(409).send({ code: "run_in_progress", message: "Ya hay una respuesta en curso para esta conversacion." });
+      }
 
       const userMessage = await prisma.conversationMessage.create({
         data: {
@@ -355,89 +616,435 @@ export async function buildApp(): Promise<FastifyInstance> {
           conversationId: conversation.id,
           authorId: userId,
           tone: MessageTone.user,
-          body: body.message
+          body: body.content
         }
       });
 
-      const activityBodies = [
-        "[[activity:thinking]] Analizando el nuevo turno y preparando la siguiente accion.",
-        "[[activity:reasoning]] Organizando el contexto operativo y el historial visible.",
-        "[[activity:tool]] Consultando el proveedor configurado para responder desde el orquestador."
-      ];
+      const run = await prisma.assistantRun.create({
+        data: {
+          tenantId,
+          conversationId: conversation.id,
+          userMessageId: userMessage.id,
+          status: AssistantRunStatus.queued,
+          phase: AssistantRunPhase.thinking
+        }
+      });
 
-      for (const activityBody of activityBodies) {
-        await prisma.conversationMessage.create({
-          data: {
-            tenantId,
-            conversationId: conversation.id,
-            authorId: userId,
-            tone: MessageTone.system,
-            body: activityBody
-          }
-        });
+      const nextTitle =
+        isPlaceholderConversationTitle(conversation.title) && body.content.trim()
+          ? buildConversationAutotitle(body.content, conversation.title)
+          : conversation.title;
+
+      await prisma.conversation.update({
+        where: { id: conversation.id },
+        data: {
+          title: nextTitle,
+          promptDraft: body.content,
+          updatedAt: new Date()
+        }
+      });
+
+      const conversationSummary = await getConversationSummaryById(tenantId, userId, conversation.id);
+
+      return {
+        runId: run.id,
+        conversationId: conversation.id,
+        userMessage: serializeConversationMessage({ ...userMessage, conversationId: conversation.id, createdAt: userMessage.createdAt }),
+        assistantDraftMessage: {
+          id: `draft-${run.id}`,
+          conversationId: conversation.id,
+          role: "assistant",
+          content: "",
+          createdAt: new Date().toISOString(),
+          runId: run.id
+        },
+        conversationSummary: conversationSummary ?? undefined
+      };
+    } catch (error) {
+      return mapError(reply, error);
+    }
+  });
+
+  app.post("/conversations/:id/retry-last", { preHandler: [requireAuth] }, async (request, reply) => {
+    try {
+      const params = request.params as { id: string };
+      const tenantId = request.auth!.tenantId;
+      const userId = request.auth!.userId;
+      const conversation = await prisma.conversation.findFirst({
+        where: { id: params.id, tenantId, userId }
+      });
+      if (!conversation) {
+        return reply.status(404).send({ code: "not_found" });
       }
 
-      const assistantResult = await runAssistantTurn(prisma, {
-        tenantId,
-        prompt: body.message,
-        caseRow,
-        history: [...conversation.messages.map((item) => ({ tone: item.tone, body: item.body })), { tone: MessageTone.user, body: body.message }]
+      const activeRun = await prisma.assistantRun.findFirst({
+        where: { tenantId, conversationId: conversation.id, status: { in: [AssistantRunStatus.queued, AssistantRunStatus.running] } },
+        orderBy: { createdAt: "desc" }
       });
+      if (activeRun) {
+        return reply.status(409).send({ code: "run_in_progress", message: "Ya hay una respuesta en curso para esta conversacion." });
+      }
 
-      await prisma.conversationMessage.create({
+      const lastUserMessage = await prisma.conversationMessage.findFirst({
+        where: { tenantId, conversationId: conversation.id, tone: MessageTone.user },
+        orderBy: { createdAt: "desc" }
+      });
+      if (!lastUserMessage) {
+        return reply.status(409).send({ code: "no_user_turn", message: "Este hilo no tiene un mensaje de usuario para reintentar." });
+      }
+
+      const run = await prisma.assistantRun.create({
         data: {
           tenantId,
           conversationId: conversation.id,
-          authorId: userId,
-          tone: MessageTone.assistant,
-          body: assistantResult.text
-        }
-      });
-
-      await prisma.conversationMessage.create({
-        data: {
-          tenantId,
-          conversationId: conversation.id,
-          authorId: userId,
-          tone: MessageTone.system,
-          body: `[[activity:ready]] Respuesta lista desde ${assistantResult.provider} con ${assistantResult.model}.`
+          userMessageId: lastUserMessage.id,
+          status: AssistantRunStatus.queued,
+          phase: AssistantRunPhase.thinking
         }
       });
 
       await prisma.conversation.update({
         where: { id: conversation.id },
-        data: { promptDraft: body.message }
+        data: {
+          promptDraft: lastUserMessage.body,
+          updatedAt: new Date()
+        }
+      });
+
+      const conversationSummary = await getConversationSummaryById(tenantId, userId, conversation.id);
+
+      return {
+        runId: run.id,
+        conversationId: conversation.id,
+        userMessage: serializeConversationMessage({ ...lastUserMessage, conversationId: conversation.id, createdAt: lastUserMessage.createdAt }),
+        assistantDraftMessage: {
+          id: `draft-${run.id}`,
+          conversationId: conversation.id,
+          role: "assistant",
+          content: "",
+          createdAt: new Date().toISOString(),
+          runId: run.id
+        },
+        reusedUserMessageId: lastUserMessage.id,
+        conversationSummary: conversationSummary ?? undefined
+      };
+    } catch (error) {
+      return mapError(reply, error);
+    }
+  });
+
+  app.post("/conversations/:id/messages/stream", { preHandler: [requireAuth] }, async (request, reply) => {
+    const params = request.params as { id: string };
+    const query = request.query as { runId?: string };
+    if (!query.runId) {
+      return reply.status(422).send({ code: "validation_error", message: "runId es requerido para abrir el stream." });
+    }
+    const tenantId = request.auth!.tenantId;
+    const userId = request.auth!.userId;
+    const conversation = await prisma.conversation.findFirst({
+      where: { id: params.id, tenantId, userId },
+      include: {
+        case: true,
+        messages: {
+          where: { tone: { in: [MessageTone.user, MessageTone.assistant] } },
+          orderBy: { createdAt: "asc" }
+        }
+      }
+    });
+    if (!conversation) {
+      return reply.status(404).send({ code: "not_found" });
+    }
+    const run = await prisma.assistantRun.findFirst({
+      where: { id: query.runId, tenantId, conversationId: conversation.id }
+    });
+    if (!run) {
+      return reply.status(404).send({ code: "not_found", message: "Run no encontrado." });
+    }
+
+    reply.hijack();
+    reply.raw.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
+    reply.raw.setHeader("Cache-Control", "no-cache, no-transform");
+    reply.raw.setHeader("Connection", "keep-alive");
+
+    const controller = new AbortController();
+    activeRunControllers.set(run.id, controller);
+    request.raw.on("close", () => {
+      if (!controller.signal.aborted) {
+        controller.abort();
+      }
+      activeRunControllers.delete(run.id);
+    });
+
+    try {
+      await prisma.assistantRun.update({
+        where: { id: run.id },
+        data: { status: AssistantRunStatus.running, phase: AssistantRunPhase.thinking }
+      });
+
+      const assistantMessageId = `draft-${run.id}`;
+      await writeNdjson(reply, {
+        type: "run.started",
+        runId: run.id,
+        conversationId: conversation.id,
+        messageId: assistantMessageId,
+        userMessageId: run.userMessageId,
+        assistantDraftMessageId: assistantMessageId,
+        createdAt: new Date().toISOString()
+      });
+      await writeNdjson(reply, {
+        type: "status.changed",
+        runId: run.id,
+        conversationId: conversation.id,
+        messageId: assistantMessageId,
+        phase: "thinking",
+        label: "Pensando",
+        detail: "Analizando el nuevo turno y preparando la respuesta."
+      });
+      await sleep(90);
+      await prisma.assistantRun.update({
+        where: { id: run.id },
+        data: { phase: AssistantRunPhase.reading_context }
+      });
+      await writeNdjson(reply, {
+        type: "context.reading",
+        runId: run.id,
+        conversationId: conversation.id,
+        messageId: assistantMessageId,
+        detail: "Leyendo historial reciente y contexto del caso."
+      });
+      await writeNdjson(reply, {
+        type: "status.changed",
+        runId: run.id,
+        conversationId: conversation.id,
+        messageId: assistantMessageId,
+        phase: "reading_context",
+        label: "Analizando contexto",
+        detail: "Reuniendo el historial y el estado operativo antes de responder."
+      });
+      await sleep(90);
+      await prisma.assistantRun.update({
+        where: { id: run.id },
+        data: { phase: AssistantRunPhase.reasoning }
+      });
+      await writeNdjson(reply, {
+        type: "reasoning.started",
+        runId: run.id,
+        conversationId: conversation.id,
+        messageId: assistantMessageId,
+        detail: "Priorizando la mejor accion util para este turno."
+      });
+      await writeNdjson(reply, {
+        type: "status.changed",
+        runId: run.id,
+        conversationId: conversation.id,
+        messageId: assistantMessageId,
+        phase: "reasoning",
+        label: "Razonando",
+        detail: "Organizando la respuesta final."
+      });
+      await sleep(90);
+      await prisma.assistantRun.update({
+        where: { id: run.id },
+        data: { phase: AssistantRunPhase.using_tool }
+      });
+      await writeNdjson(reply, {
+        type: "tool.started",
+        runId: run.id,
+        conversationId: conversation.id,
+        messageId: assistantMessageId,
+        toolCallId: buildToolEventId(run.id, "tenant-context", "started"),
+        toolName: "tenant-context",
+        detail: "Preparando contexto de tenant y del caso antes de consultar el proveedor.",
+        createdAt: new Date().toISOString()
+      });
+      await writeNdjson(reply, {
+        type: "tool.progress",
+        runId: run.id,
+        conversationId: conversation.id,
+        messageId: assistantMessageId,
+        toolCallId: buildToolEventId(run.id, "tenant-context", "progress"),
+        toolName: "tenant-context",
+        detail: conversation.case ? `Contexto del caso ${conversation.case.code} listo para el run.` : "Contexto general del tenant listo para el run.",
+        createdAt: new Date().toISOString()
+      });
+      await writeNdjson(reply, {
+        type: "tool.completed",
+        runId: run.id,
+        conversationId: conversation.id,
+        messageId: assistantMessageId,
+        toolCallId: buildToolEventId(run.id, "tenant-context", "completed"),
+        toolName: "tenant-context",
+        detail: "Contexto operativo consolidado.",
+        createdAt: new Date().toISOString()
+      });
+      await writeNdjson(reply, {
+        type: "tool.started",
+        runId: run.id,
+        conversationId: conversation.id,
+        messageId: assistantMessageId,
+        toolCallId: buildToolEventId(run.id, "assistant-provider", "started"),
+        toolName: "assistant-provider",
+        detail: "Consultando el proveedor configurado.",
+        createdAt: new Date().toISOString()
+      });
+
+      const assistantResult = await runAssistantTurn(prisma, {
+        tenantId,
+        prompt: conversation.promptDraft,
+        caseRow: conversation.case,
+        history: conversation.messages.map((item) => ({ tone: item.tone, body: item.body })),
+        signal: controller.signal
+      });
+
+      await writeNdjson(reply, {
+        type: "tool.completed",
+        runId: run.id,
+        conversationId: conversation.id,
+        messageId: assistantMessageId,
+        toolCallId: buildToolEventId(run.id, "assistant-provider", "completed"),
+        toolName: "assistant-provider",
+        detail: "Proveedor consultado correctamente.",
+        createdAt: new Date().toISOString()
+      });
+      await prisma.assistantRun.update({
+        where: { id: run.id },
+        data: { phase: AssistantRunPhase.drafting, provider: assistantResult.provider, model: assistantResult.model }
+      });
+      await writeNdjson(reply, {
+        type: "status.changed",
+        runId: run.id,
+        conversationId: conversation.id,
+        messageId: assistantMessageId,
+        phase: "drafting",
+        label: "Redactando respuesta",
+        detail: "Transmitiendo la respuesta en tiempo real."
+      });
+
+      let text = "";
+      for (const chunk of chunkText(assistantResult.text)) {
+        if (controller.signal.aborted) {
+          throw new AssistantProviderError("Run cancelado por el usuario.", 499);
+        }
+        text += chunk;
+        await writeNdjson(reply, {
+          type: "message.delta",
+          runId: run.id,
+          conversationId: conversation.id,
+          messageId: assistantMessageId,
+          delta: chunk
+        });
+        await sleep(45);
+      }
+
+      const assistantMessage = await prisma.conversationMessage.create({
+        data: {
+          tenantId,
+          conversationId: conversation.id,
+          authorId: userId,
+          tone: MessageTone.assistant,
+          body: text,
+          runId: run.id
+        }
+      });
+
+      await prisma.assistantRun.update({
+        where: { id: run.id },
+        data: {
+          assistantMessageId: assistantMessage.id,
+          status: AssistantRunStatus.completed,
+          phase: AssistantRunPhase.completed,
+          completedAt: new Date()
+        }
+      });
+
+      await prisma.conversation.update({
+        where: { id: conversation.id },
+        data: { updatedAt: new Date() }
       });
 
       await prisma.usageEvent.create({
         data: {
           tenantId,
-          caseId: caseRow?.id,
+          caseId: conversation.caseId,
           successful: true,
           estimatedTokens: assistantResult.estimatedTokens || 0
         }
       });
 
-      await audit(tenantId, userId, "chat", "message", "success", { caseId: body.caseId ?? null, provider: assistantResult.provider, model: assistantResult.model }, "conversation", conversation.id);
+      await audit(tenantId, userId, "chat", "message_stream", "success", { conversationId: conversation.id, provider: assistantResult.provider, model: assistantResult.model }, "conversation", conversation.id);
 
-      const refreshed = await prisma.conversation.findUniqueOrThrow({
-        where: { id: conversation.id },
-        include: { messages: { orderBy: { createdAt: "asc" } } }
+      await writeNdjson(reply, {
+        type: "message.completed",
+        runId: run.id,
+        conversationId: conversation.id,
+        message: serializeConversationMessage({ ...assistantMessage, conversationId: conversation.id, createdAt: assistantMessage.createdAt })
       });
-
-      return {
-        title: refreshed.title,
-        promptDraft: refreshed.promptDraft,
-        messages: refreshed.messages.map(serializeConversationMessage),
-        meta: {
-          provider: assistantResult.provider,
-          model: assistantResult.model,
-          lastUserMessageId: userMessage.id
-        }
-      };
+      await writeNdjson(reply, {
+        type: "run.completed",
+        runId: run.id,
+        conversationId: conversation.id,
+        provider: assistantResult.provider,
+        model: assistantResult.model
+      });
     } catch (error) {
-      return mapError(reply, error);
+      const isCancelled = controller.signal.aborted || (error instanceof AssistantProviderError && error.statusCode === 499);
+      if (!isCancelled) {
+        await writeNdjson(reply, {
+          type: "tool.failed",
+          runId: run.id,
+          conversationId: conversation.id,
+          messageId: `draft-${run.id}`,
+          toolCallId: buildToolEventId(run.id, "assistant-provider", "failed"),
+          toolName: "assistant-provider",
+          detail: error instanceof Error ? error.message : "No se pudo completar la consulta al proveedor.",
+          createdAt: new Date().toISOString()
+        });
+      }
+      await prisma.assistantRun.update({
+        where: { id: run.id },
+        data: {
+          status: isCancelled ? AssistantRunStatus.cancelled : AssistantRunStatus.error,
+          phase: isCancelled ? AssistantRunPhase.cancelled : AssistantRunPhase.error,
+          errorMessage: error instanceof Error ? error.message : "No se pudo completar el run.",
+          cancelledAt: isCancelled ? new Date() : null,
+          completedAt: isCancelled ? null : new Date()
+        }
+      });
+      await writeNdjson(reply, isCancelled ? { type: "run.cancelled", runId: run.id, conversationId: conversation.id } : { type: "run.error", runId: run.id, conversationId: conversation.id, error: error instanceof Error ? error.message : "No se pudo completar el run." });
+    } finally {
+      activeRunControllers.delete(run.id);
+      reply.raw.end();
     }
+  });
+
+  app.post("/runs/:id/cancel", { preHandler: [requireAuth] }, async (request, reply) => {
+    const params = request.params as { id: string };
+    const run = await prisma.assistantRun.findFirst({
+      where: { id: params.id, tenantId: request.auth!.tenantId, conversation: { userId: request.auth!.userId } }
+    });
+    if (!run) {
+      return reply.status(404).send({ code: "not_found" });
+    }
+    activeRunControllers.get(run.id)?.abort();
+    await prisma.assistantRun.update({
+      where: { id: run.id },
+      data: {
+        status: AssistantRunStatus.cancelled,
+        phase: AssistantRunPhase.cancelled,
+        cancelledAt: new Date()
+      }
+    });
+    return { ok: true };
+  });
+
+  app.get("/chat/conversation", { preHandler: [requireAuth] }, async (request) => {
+    const query = request.query as { caseId?: string };
+    const base = await ensureUserConversation(request.auth!.tenantId, request.auth!.userId, query.caseId ?? null);
+    return serializeConversation(base);
+  });
+
+  app.post("/chat/message", { preHandler: [requireAuth] }, async (_request, reply) => {
+    return reply.status(410).send({ code: "deprecated", message: "Usa /conversations/:id/messages y /stream." });
   });
 
   app.get("/tenant-config", { preHandler: [requireAuth, requireRole([RoleKey.admin])] }, async (request) => {

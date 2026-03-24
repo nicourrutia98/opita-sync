@@ -23,15 +23,123 @@ export interface CaseDetailDto extends CaseSummaryDto {
 }
 
 export interface ConversationDto {
+  id: string;
   title: string;
+  caseId?: string;
   promptDraft: string;
-  messages: Array<{ id: string; tone: "user" | "assistant" | "system"; body: string }>;
+  updatedAt: string;
+  createdAt?: string;
+  archivedAt?: string;
+}
+
+export interface ConversationSummaryDto {
+  id: string;
+  title: string;
+  caseId?: string;
+  lastMessagePreview: string;
+  updatedAt: string;
+  createdAt?: string;
+  archivedAt?: string;
+  status?: "queued" | "running" | "completed" | "error" | "cancelled";
+}
+
+export interface ConversationMessageDto {
+  id: string;
+  conversationId: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  createdAt: string;
+  runId?: string;
+}
+
+export interface ConversationMessagePageDto {
+  items: ConversationMessageDto[];
+  prevCursor: string | null;
+  hasMoreBefore: boolean;
 }
 
 export interface SendChatMessageDto {
-  caseId?: string;
-  message: string;
+  content: string;
+  attachments?: Array<{ id: string; name: string }>;
+  metadata?: Record<string, string>;
 }
+
+export interface SendChatMessageResultDto {
+  runId: string;
+  conversationId: string;
+  userMessage: ConversationMessageDto;
+  assistantDraftMessage: ConversationMessageDto;
+  reusedUserMessageId?: string;
+  conversationSummary?: ConversationSummaryDto;
+}
+
+export type ChatStreamEventDto =
+  | {
+      type: "run.started";
+      runId: string;
+      conversationId: string;
+      messageId: string;
+      userMessageId: string;
+      assistantDraftMessageId: string;
+      createdAt: string;
+    }
+  | {
+      type: "status.changed";
+      runId: string;
+      conversationId: string;
+      messageId?: string;
+      phase: "thinking" | "reasoning" | "using_tool" | "reading_context" | "drafting" | "completed" | "error" | "cancelled";
+      label: string;
+      detail?: string;
+    }
+  | {
+      type: "context.reading" | "reasoning.started";
+      runId: string;
+      conversationId: string;
+      messageId?: string;
+      detail?: string;
+    }
+  | {
+      type: "tool.started" | "tool.progress" | "tool.completed" | "tool.failed";
+      runId: string;
+      conversationId: string;
+      messageId?: string;
+      toolCallId: string;
+      toolName: string;
+      detail?: string;
+      createdAt: string;
+    }
+  | {
+      type: "message.delta";
+      runId: string;
+      conversationId: string;
+      messageId: string;
+      delta: string;
+    }
+  | {
+      type: "message.completed";
+      runId: string;
+      conversationId: string;
+      message: ConversationMessageDto;
+    }
+  | {
+      type: "run.completed";
+      runId: string;
+      conversationId: string;
+      provider?: string;
+      model?: string;
+    }
+  | {
+      type: "run.error";
+      runId: string;
+      conversationId: string;
+      error: string;
+    }
+  | {
+      type: "run.cancelled";
+      runId: string;
+      conversationId: string;
+    };
 
 export interface AssistantConnectionStatusDto {
   ok: boolean;

@@ -7,6 +7,9 @@ export type ToolRiskLevel = "low" | "medium" | "high" | "critical";
 export type PolicyMode = "suggest" | "confirm_then_execute" | "auto_execute";
 export type ToolCertificationState = "draft" | "certified" | "deprecated";
 export type EvidenceVisibility = "internal" | "supervisor_only";
+export type AssistantRunPhase = "thinking" | "reasoning" | "using_tool" | "reading_context" | "drafting" | "completed" | "error" | "cancelled";
+export type AssistantRunStatus = "queued" | "running" | "completed" | "error" | "cancelled";
+export type TTSState = "idle" | "speaking" | "paused" | "error";
 
 export interface RoleOption {
   id: Role;
@@ -57,14 +60,170 @@ export interface DashboardData {
 
 export interface ChatMessage {
   id: string;
-  tone: "user" | "assistant" | "system";
-  body: string;
+  conversationId: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  createdAt: string;
+  runId?: string;
 }
 
 export interface ConversationState {
+  id: string;
   title: string;
+  caseId?: string;
   promptDraft: string;
-  messages: ChatMessage[];
+  updatedAt: string;
+}
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  caseId?: string;
+  lastMessagePreview: string;
+  updatedAt: string;
+  createdAt?: string;
+  archivedAt?: string;
+  status?: AssistantRunStatus;
+}
+
+export interface ConversationMessagePage {
+  items: ChatMessage[];
+  prevCursor: string | null;
+  hasMoreBefore: boolean;
+}
+
+export interface RunStatusSnapshot {
+  runId: string;
+  conversationId: string;
+  messageId?: string;
+  status: AssistantRunStatus;
+  phase: AssistantRunPhase;
+  label: string;
+  detail?: string;
+  provider?: string;
+  model?: string;
+  error?: string;
+}
+
+export interface SendMessageResult {
+  runId: string;
+  conversationId: string;
+  userMessage: ChatMessage;
+  assistantDraftMessage: ChatMessage;
+  reusedUserMessageId?: string;
+  conversationSummary?: ConversationSummary;
+}
+
+export interface SendMessageInput {
+  conversationId: string;
+  caseId?: string;
+  content: string;
+  attachments?: Array<{ id: string; name: string }>;
+  metadata?: Record<string, string>;
+}
+
+export interface ListConversationsInput {
+  limit?: number;
+}
+
+export interface CreateConversationInput {
+  caseId?: string;
+}
+
+export interface UpdateConversationInput {
+  conversationId: string;
+  title?: string;
+  archived?: boolean;
+}
+
+export interface ConversationMessagesInput {
+  conversationId: string;
+  limit?: number;
+  before?: string;
+}
+
+export interface CancelRunInput {
+  runId: string;
+}
+
+export type ChatStreamEvent =
+  | {
+      type: "run.started";
+      runId: string;
+      conversationId: string;
+      messageId: string;
+      userMessageId: string;
+      assistantDraftMessageId: string;
+      createdAt: string;
+    }
+  | {
+      type: "status.changed";
+      runId: string;
+      conversationId: string;
+      messageId?: string;
+      phase: AssistantRunPhase;
+      label: string;
+      detail?: string;
+    }
+  | {
+      type: "context.reading" | "reasoning.started";
+      runId: string;
+      conversationId: string;
+      messageId?: string;
+      detail?: string;
+    }
+  | {
+      type: "tool.started" | "tool.progress" | "tool.completed" | "tool.failed";
+      runId: string;
+      conversationId: string;
+      messageId?: string;
+      toolCallId: string;
+      toolName: string;
+      detail?: string;
+      createdAt: string;
+    }
+  | {
+      type: "message.delta";
+      runId: string;
+      conversationId: string;
+      messageId: string;
+      delta: string;
+    }
+  | {
+      type: "message.completed";
+      runId: string;
+      conversationId: string;
+      message: ChatMessage;
+    }
+  | {
+      type: "run.completed";
+      runId: string;
+      conversationId: string;
+      provider?: string;
+      model?: string;
+    }
+  | {
+      type: "run.error";
+      runId: string;
+      conversationId: string;
+      error: string;
+    }
+  | {
+      type: "run.cancelled";
+      runId: string;
+      conversationId: string;
+    };
+
+export interface ChatTransport {
+  listConversations(input?: ListConversationsInput): Promise<ConversationSummary[]>;
+  createConversation(input?: CreateConversationInput): Promise<ConversationSummary>;
+  updateConversation(input: UpdateConversationInput): Promise<ConversationSummary>;
+  getConversationMessages(input: ConversationMessagesInput): Promise<ConversationMessagePage>;
+  sendMessage(input: SendMessageInput): Promise<SendMessageResult>;
+  retryLastMessage(input: { conversationId: string }): Promise<SendMessageResult>;
+  streamAssistantResponse(input: { conversationId: string; runId: string; signal?: AbortSignal; onEvent: (event: ChatStreamEvent) => void }): Promise<void>;
+  cancelRun(input: CancelRunInput): Promise<void>;
+  subscribeConversationUpdates?(input: { onConversationUpdated: (conversation: ConversationSummary) => void }): () => void;
 }
 
 export interface AssistantConnectionStatus {
@@ -238,8 +397,8 @@ export interface SessionState {
 }
 
 export const roles: RoleOption[] = [
-  { id: "solicitante", label: "Solicitante", description: "Reporta, consulta y hace seguimiento desde movil." },
-  { id: "tecnico", label: "Tecnico", description: "Opera casos, bitacora y comunicacion asistida." },
+  { id: "solicitante", label: "Solicitante", description: "Reporta, consulta y hace seguimiento desde móvil." },
+  { id: "tecnico", label: "Técnico", description: "Opera casos, bitácora y comunicación asistida." },
   { id: "supervisor", label: "Supervisor", description: "Gestiona bloqueos, aprobaciones y valor operativo." },
   { id: "admin", label: "Administrador", description: "Organiza ajustes, herramientas y seguimiento general." }
 ];
@@ -256,7 +415,7 @@ export const viewLabels: Record<ViewKey, string> = {
   chat: "Chat",
   casos: "Casos",
   detalle: "Detalle",
-  configuracion: "Configuracion"
+  configuracion: "Configuración"
 };
 
 export const defaultCaseId = "CAS-2048";

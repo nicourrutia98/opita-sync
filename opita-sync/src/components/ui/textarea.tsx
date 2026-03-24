@@ -1,4 +1,4 @@
-import * as React from "react";
+﻿import * as React from "react";
 import { cn } from "../../lib/utils";
 
 export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -6,7 +6,10 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
   maxHeight?: number;
 }
 
-export function Textarea({ className, autoGrow = false, maxHeight = 240, onChange, ...props }: TextareaProps) {
+export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
+  { className, autoGrow = false, maxHeight = 240, onChange, ...props },
+  forwardedRef
+) {
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
 
   const resizeToFit = React.useCallback(() => {
@@ -24,16 +27,23 @@ export function Textarea({ className, autoGrow = false, maxHeight = 240, onChang
 
   return (
     <textarea
-      ref={textareaRef}
+      ref={(node) => {
+        textareaRef.current = node;
+        if (typeof forwardedRef === "function") {
+          forwardedRef(node);
+        } else if (forwardedRef) {
+          forwardedRef.current = node;
+        }
+      }}
       className={cn(
-        "min-h-28 w-full rounded-3xl border border-line bg-panel px-4 py-3 text-sm text-ink shadow-soft outline-none ring-offset-2 ring-offset-paper placeholder:text-muted focus-visible:ring-2 focus-visible:ring-brand",
+        "min-h-24 w-full rounded-[24px] border border-line/80 bg-panel px-5 py-4 text-[15px] leading-7 text-ink shadow-soft outline-none transition-[height,border-color,box-shadow,background-color] duration-200 ease-out ring-offset-2 ring-offset-paper placeholder:text-muted/95 focus-visible:border-brand/45 focus-visible:ring-2 focus-visible:ring-brand/20 disabled:cursor-not-allowed disabled:border-line/70 disabled:bg-surface/80 disabled:text-muted",
         className
       )}
       onChange={(event) => {
-        resizeToFit();
         onChange?.(event);
       }}
+      onInput={resizeToFit}
       {...props}
     />
   );
-}
+});

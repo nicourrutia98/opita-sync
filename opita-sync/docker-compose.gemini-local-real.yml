@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: opita-sync-postgres-gemini-real
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Akyoh5WhaItm1qN
+      POSTGRES_DB: opita_sync_gemini
+    ports:
+      - "5434:5432"
+    volumes:
+      - opita_sync_gemini_pgdata:/var/lib/postgresql/data
+
+volumes:
+  opita_sync_gemini_pgdata:

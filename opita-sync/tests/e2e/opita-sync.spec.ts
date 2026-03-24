@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 async function signIn(page: import("@playwright/test").Page, email: string, password = "Demo1234!") {
-  await page.getByPlaceholder("correo@tenant.com").fill(email);
-  await page.getByPlaceholder("Contrasena").fill(password);
-  await page.getByRole("button", { name: "Entrar" }).click();
+  await page.getByLabel("Correo corporativo").fill(email);
+  await page.getByLabel("Contraseña").fill(password);
+  await page.getByRole("button", { name: "Iniciar sesión" }).click();
 }
 
 async function gotoStub(page: import("@playwright/test").Page, extraQuery = "") {
@@ -123,14 +123,10 @@ test("opita sync generates assisted draft from chat on authenticated flow", asyn
 
   await signIn(page, "tecnico@acme.opita.test");
   await page.getByRole("button", { name: "Chat", exact: true }).click();
-  await expect(page.getByText("Chat / Orchestrator", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Coordinacion general del turno|Intencion operativa con contexto/i })).toBeVisible();
+  await page.getByRole("button", { name: "Generar borrador" }).click();
 
-  const assistance = page.locator("details").filter({ has: page.getByText("Asistencia y auditoria") });
-  await assistance.locator("summary").click();
-  await page.getByRole("button", { name: "Generar borrador asistido" }).click();
-
-  await expect(page.getByText("Borrador generado")).toBeVisible();
-  await expect(page.getByText("Prompt base:")).toBeVisible();
+  await expect(page.getByText("Borrador asistido")).toBeVisible();
 });
 
 test("opita sync shows release-3 value reporting block on home", async ({ page }) => {
@@ -196,9 +192,9 @@ test("opita sync preserves continuity across the main tecnico journey", async ({
   await signIn(page, "tecnico@acme.opita.test");
 
   await page.getByRole("button", { name: "Ir a chat" }).click();
-  await expect(page.getByText("Chat / Orchestrator", { exact: true })).toBeVisible();
-  await expect(page.getByText("Hilo principal", { exact: true })).toBeVisible();
-  await expect(page.locator("textarea")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Coordinacion general del turno|Intencion operativa con contexto/i })).toBeVisible();
+  await expect(page.getByText("Chats recientes").first()).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Escribe un mensaje" }).first()).toBeVisible();
 
   await page.getByRole("button", { name: "Casos", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Una cola mas limpia para decidir mas rapido." })).toBeVisible();
@@ -206,7 +202,7 @@ test("opita sync preserves continuity across the main tecnico journey", async ({
 
   await page.getByRole("button", { name: "Ver detalle" }).first().click();
   await expect(page.getByRole("heading", { name: "El caso como centro de continuidad." })).toBeVisible();
-  await expect(page.getByText("Bitacora gobernada")).toBeVisible();
+  await expect(page.getByText("Bitacora gobernada").first()).toBeVisible();
 
   await page.getByRole("button", { name: "Inicio", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Empieza por lo importante y entra al caso correcto mas rapido." })).toBeVisible();

@@ -43,14 +43,44 @@ function withFallback(primary: OpitaAppServices, fallback: OpitaAppServices): Op
       }
     },
     chatService: {
-      async getConversation(role, caseId) {
+      async listConversations(input) {
         try {
-          return await primary.chatService.getConversation(role, caseId);
+          return await primary.chatService.listConversations(input);
         } catch (error) {
           if (isServiceError(error) && (error.status === 401 || error.status === 403)) {
             throw error;
           }
-          return await fallback.chatService.getConversation(role, caseId);
+          return await fallback.chatService.listConversations(input);
+        }
+      },
+      async createConversation(input) {
+        try {
+          return await primary.chatService.createConversation(input);
+        } catch (error) {
+          if (isServiceError(error) && (error.status === 401 || error.status === 403)) {
+            throw error;
+          }
+          return await fallback.chatService.createConversation(input);
+        }
+      },
+      async updateConversation(input) {
+        try {
+          return await primary.chatService.updateConversation(input);
+        } catch (error) {
+          if (isServiceError(error) && (error.status === 401 || error.status === 403)) {
+            throw error;
+          }
+          return await fallback.chatService.updateConversation(input);
+        }
+      },
+      async getConversationMessages(input) {
+        try {
+          return await primary.chatService.getConversationMessages(input);
+        } catch (error) {
+          if (isServiceError(error) && (error.status === 401 || error.status === 403)) {
+            throw error;
+          }
+          return await fallback.chatService.getConversationMessages(input);
         }
       },
       async sendMessage(input) {
@@ -62,6 +92,39 @@ function withFallback(primary: OpitaAppServices, fallback: OpitaAppServices): Op
           }
           return await fallback.chatService.sendMessage(input);
         }
+      },
+      async retryLastMessage(input) {
+        try {
+          return await primary.chatService.retryLastMessage(input);
+        } catch (error) {
+          if (isServiceError(error) && (error.status === 401 || error.status === 403)) {
+            throw error;
+          }
+          return await fallback.chatService.retryLastMessage(input);
+        }
+      },
+      async streamAssistantResponse(input) {
+        try {
+          return await primary.chatService.streamAssistantResponse(input);
+        } catch (error) {
+          if (isServiceError(error) && (error.status === 401 || error.status === 403)) {
+            throw error;
+          }
+          return await fallback.chatService.streamAssistantResponse(input);
+        }
+      },
+      async cancelRun(input) {
+        try {
+          return await primary.chatService.cancelRun(input);
+        } catch (error) {
+          if (isServiceError(error) && (error.status === 401 || error.status === 403)) {
+            throw error;
+          }
+          return await fallback.chatService.cancelRun(input);
+        }
+      },
+      subscribeConversationUpdates(input) {
+        return primary.chatService.subscribeConversationUpdates?.(input) ?? fallback.chatService.subscribeConversationUpdates?.(input) ?? (() => {});
       }
     },
     tenantConfigService: {

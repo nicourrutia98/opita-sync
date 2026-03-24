@@ -4,7 +4,10 @@ import type {
   CapabilityItem,
   CaseDetail,
   CaseSummary,
-  ConversationState,
+  ChatMessage,
+  ChatStreamEvent,
+  ConversationMessagePage,
+  ConversationSummary,
   DashboardData,
   DataReuseConsent,
   AssistantConnectionStatus,
@@ -26,7 +29,11 @@ import type {
   BillingExportDto,
   CaseDetailDto,
   CaseSummaryDto,
+  ChatStreamEventDto,
   ConversationDto,
+  ConversationMessageDto,
+  ConversationMessagePageDto,
+  ConversationSummaryDto,
   AssistantConnectionStatusDto,
   DataReuseConsentDto,
   DraftRequestDto,
@@ -45,6 +52,7 @@ import type {
   SignInRequestDto,
   SignInResponseDto,
   SendChatMessageDto,
+  SendChatMessageResultDto,
   TenantConfigDto,
   ToolGovernanceDto,
   UsageAttributionDto,
@@ -76,7 +84,7 @@ async function fetchJson<T>(
   baseUrl: string,
   pathname: string,
   options: {
-    method?: "GET" | "POST";
+    method?: "GET" | "POST" | "PATCH";
     token?: string;
     body?: unknown;
     params?: Record<string, string | undefined>;
@@ -124,6 +132,107 @@ function mapDashboardDto(dto: DashboardDto, role: Role): DashboardData {
     supervisorQueue: dto.supervisorQueue,
     supervisorSignals: dto.supervisorSignals
   };
+}
+
+function mapConversationDto(dto: ConversationDto) {
+  return dto;
+}
+
+function mapConversationSummaryDto(dto: ConversationSummaryDto): ConversationSummary {
+  return dto;
+}
+
+function mapBootstrapConversationDto(dto: ConversationSummaryDto | ConversationDto): ConversationSummary {
+  return {
+    id: dto.id,
+    title: dto.title,
+    caseId: dto.caseId,
+    lastMessagePreview: "lastMessagePreview" in dto ? dto.lastMessagePreview : "",
+    updatedAt: dto.updatedAt,
+    status: "status" in dto ? dto.status : undefined
+  };
+}
+
+function mapConversationMessageDto(dto: ConversationMessageDto): ChatMessage {
+  return dto;
+}
+
+function mapConversationMessagePageDto(dto: ConversationMessagePageDto): ConversationMessagePage {
+  return {
+    items: dto.items.map(mapConversationMessageDto),
+    prevCursor: dto.prevCursor,
+    hasMoreBefore: dto.hasMoreBefore
+  };
+}
+
+function mapChatStreamEventDto(dto: ChatStreamEventDto): ChatStreamEvent {
+  return dto;
+}
+
+async function fetchStream(
+  baseUrl: string,
+  pathname: string,
+  options: {
+    token?: string;
+    body?: unknown;
+    signal?: AbortSignal;
+    onEvent: (event: ChatStreamEvent) => void;
+  }
+): Promise<void> {
+  const url = new URL(pathname, `${baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`}`);
+  const response = await fetch(url.toString(), {
+    method: "POST",
+    headers: {
+      Accept: "application/x-ndjson",
+      "Content-Type": "application/json",
+      ...(options.token ? { Authorization: `Bearer ${options.token}` } : {})
+    },
+    body: JSON.stringify(options.body ?? {}),
+    signal: options.signal
+  });
+
+  if (!response.ok) {
+    let message: string | undefined;
+    try {
+      const payload = await response.json();
+      message = payload?.message ?? payload?.detail ?? payload?.error;
+    } catch {
+      message = await response.text();
+    }
+    throw mapHttpError(response.status, message?.trim() ? message.trim() : undefined);
+  }
+
+  if (!response.body) {
+    throw new ServiceError("El servidor no devolvio un stream valido.", "unknown", 502);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        continue;
+      }
+      options.onEvent(mapChatStreamEventDto(JSON.parse(trimmed) as ChatStreamEventDto));
+    }
+  }
+
+  const tail = buffer.trim();
+  if (tail) {
+    options.onEvent(mapChatStreamEventDto(JSON.parse(tail) as ChatStreamEventDto));
+  }
 }
 
 function getRequiredSession(storageKey: string): SessionState {
@@ -212,21 +321,116 @@ export function createHttpOpitaAppServices({ apiBaseUrl, storageKey }: HttpAdapt
       }
     },
     chatService: {
-      async getConversation(role: Role, caseId?: string): Promise<ConversationState> {
+      async listConversations(input = {}): Promise<ConversationSummary[]> {
         const session = getRequiredSession(storageKey);
-        return await fetchJson<ConversationDto>(apiBaseUrl, "chat/conversation", {
+        const items = await fetchJson<ConversationSummaryDto[]>(apiBaseUrl, "conversations", {
           token: session.accessToken,
-          params: { role, caseId }
+          params: { limit: String(input.limit ?? 20), sort: "updatedAt:desc" }
         });
+        return items.map(mapConversationSummaryDto);
       },
-      async sendMessage(input): Promise<ConversationState> {
+      async createConversation(input = {}) {
         const session = getRequiredSession(storageKey);
-        return await fetchJson<ConversationDto>(apiBaseUrl, "chat/message", {
+        const dto = await fetchJson<ConversationSummaryDto>(apiBaseUrl, "conversations", {
           method: "POST",
           token: session.accessToken,
-          body: { caseId: input.caseId, message: input.message } satisfies SendChatMessageDto
+          body: { caseId: input.caseId }
         });
-      }
+        return mapConversationSummaryDto(dto);
+      },
+      async updateConversation(input) {
+        const session = getRequiredSession(storageKey);
+        const dto = await fetchJson<ConversationSummaryDto>(apiBaseUrl, `conversations/${input.conversationId}`, {
+          method: "PATCH",
+          token: session.accessToken,
+          body: {
+            ...(input.title !== undefined ? { title: input.title } : {}),
+            ...(input.archived !== undefined ? { archived: input.archived } : {})
+          }
+        });
+        return mapConversationSummaryDto(dto);
+      },
+      async getConversationMessages(input): Promise<ConversationMessagePage> {
+        const session = getRequiredSession(storageKey);
+        const dto = await fetchJson<ConversationMessagePageDto>(apiBaseUrl, `conversations/${input.conversationId}/messages`, {
+          token: session.accessToken,
+          params: {
+            limit: String(input.limit ?? 30),
+            before: input.before
+          }
+        });
+        return mapConversationMessagePageDto(dto);
+      },
+      async sendMessage(input) {
+        const session = getRequiredSession(storageKey);
+        const metadata = {
+          ...(input.metadata ?? {}),
+          ...(input.caseId ? { caseId: input.caseId } : {})
+        };
+
+        let conversationSummary: ConversationSummary | undefined;
+        let conversationId = input.conversationId;
+
+        if (!conversationId) {
+          const bootstrap = await fetchJson<ConversationSummaryDto | ConversationDto | { conversation: ConversationSummaryDto | ConversationDto }>(apiBaseUrl, "conversations/bootstrap", {
+            method: "POST",
+            token: session.accessToken,
+            body: {
+              caseId: input.caseId,
+              title: input.caseId ? `Caso ${input.caseId}` : undefined
+            }
+          });
+          const bootstrapConversation = "conversation" in bootstrap ? bootstrap.conversation : bootstrap;
+          conversationSummary = mapBootstrapConversationDto(bootstrapConversation);
+          conversationId = conversationSummary.id;
+        }
+
+        const dto = await fetchJson<SendChatMessageResultDto & { conversationSummary?: ConversationSummaryDto }>(apiBaseUrl, `conversations/${conversationId}/messages`, {
+          method: "POST",
+          token: session.accessToken,
+          body: { content: input.content, attachments: input.attachments ?? [], metadata } satisfies SendChatMessageDto
+        });
+        return {
+          runId: dto.runId,
+          conversationId: dto.conversationId,
+          userMessage: mapConversationMessageDto(dto.userMessage),
+          assistantDraftMessage: mapConversationMessageDto(dto.assistantDraftMessage),
+          reusedUserMessageId: dto.reusedUserMessageId,
+          conversationSummary: dto.conversationSummary ? mapConversationSummaryDto(dto.conversationSummary) : conversationSummary
+        };
+      },
+      async retryLastMessage(input) {
+        const session = getRequiredSession(storageKey);
+        const dto = await fetchJson<SendChatMessageResultDto>(apiBaseUrl, `conversations/${input.conversationId}/retry-last`, {
+          method: "POST",
+          token: session.accessToken,
+          body: {}
+        });
+        return {
+          runId: dto.runId,
+          conversationId: dto.conversationId,
+          userMessage: mapConversationMessageDto(dto.userMessage),
+          assistantDraftMessage: mapConversationMessageDto(dto.assistantDraftMessage),
+          reusedUserMessageId: dto.reusedUserMessageId,
+          conversationSummary: dto.conversationSummary ? mapConversationSummaryDto(dto.conversationSummary) : undefined
+        };
+      },
+      async streamAssistantResponse(input) {
+        const session = getRequiredSession(storageKey);
+        await fetchStream(apiBaseUrl, `conversations/${input.conversationId}/messages/stream?runId=${encodeURIComponent(input.runId)}`, {
+          token: session.accessToken,
+          body: {},
+          signal: input.signal,
+          onEvent: input.onEvent
+        });
+      },
+      async cancelRun(input) {
+        const session = getRequiredSession(storageKey);
+        await fetchJson<{ ok: true }>(apiBaseUrl, `runs/${input.runId}/cancel`, {
+          method: "POST",
+          token: session.accessToken
+        });
+      },
     },
     tenantConfigService: {
       async getTenantConfig(): Promise<TenantConfigData> {

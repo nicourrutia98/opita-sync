@@ -10,6 +10,8 @@ import type {
   CaseDetailDto,
   CaseSummaryDto,
   ConversationDto,
+  ConversationMessageDto,
+  ConversationSummaryDto,
   DashboardDto,
   OperationalLogEntryDto,
   SessionDto,
@@ -125,28 +127,102 @@ export const caseDetailsFixture: Record<string, CaseDetailDto> = {
 };
 
 export const conversationFixture: ConversationDto = {
+  id: "conv-case-2048",
   title: "Intencion operativa con contexto",
+  caseId: "CAS-2048",
   promptDraft: "Resume la condicion del compresor, registra avance y redacta mensaje interno al supervisor.",
-  messages: [
+  updatedAt: "2026-03-24T13:44:00.000Z"
+};
+
+export const conversationMessagesFixture: ConversationMessageDto[] = [
+  {
+    id: "m1",
+    conversationId: "conv-case-2048",
+    role: "user",
+    content: "Necesito actualizar el caso del compresor y notificar al supervisor con el riesgo operativo.",
+    createdAt: "2026-03-24T13:36:00.000Z"
+  },
+  {
+    id: "m2",
+    conversationId: "conv-case-2048",
+    role: "assistant",
+    content: "Identifique la capacidad actualizar caso y generar borrador. Falta confirmar si el mensaje es regulatorio o solo operativo.",
+    createdAt: "2026-03-24T13:38:00.000Z"
+  },
+  {
+    id: "m3",
+    conversationId: "conv-case-2048",
+    role: "user",
+    content: "Solo operativo. Quiero enviar resumen interno.",
+    createdAt: "2026-03-24T13:40:00.000Z"
+  },
+  {
+    id: "m4",
+    conversationId: "conv-case-2048",
+    role: "assistant",
+    content: "Perfecto. Preparare una respuesta operativa y dejare listo el siguiente paso para el supervisor.",
+    createdAt: "2026-03-24T13:44:00.000Z"
+  }
+];
+
+export const recentConversationFixtures: ConversationSummaryDto[] = [
+  {
+    id: "conv-general",
+    title: "Coordinacion general del turno",
+    lastMessagePreview: "Puedo resumir prioridades del turno y dejar una lista accionable para el equipo.",
+    updatedAt: "2026-03-24T13:49:00.000Z",
+    status: "completed"
+  },
+  {
+    id: "conv-case-2048",
+    title: "Intencion operativa con contexto",
+    caseId: "CAS-2048",
+    lastMessagePreview: "Perfecto. Preparare una respuesta operativa y dejare listo el siguiente paso para el supervisor.",
+    updatedAt: "2026-03-24T13:44:00.000Z",
+    status: "completed"
+  },
+  {
+    id: "conv-case-2035",
+    title: "Seguimiento de red electrica",
+    caseId: "CAS-2035",
+    lastMessagePreview: "Aun falta confirmar disponibilidad de cuadrilla para cerrar la visita.",
+    updatedAt: "2026-03-24T11:18:00.000Z",
+    status: "completed"
+  }
+];
+
+export const recentConversationMessagesFixture: Record<string, ConversationMessageDto[]> = {
+  "conv-general": [
     {
-      id: "m1",
-      tone: "user",
-      body: "Necesito actualizar el caso del compresor y notificar al supervisor con el riesgo operativo."
+      id: "mg1",
+      conversationId: "conv-general",
+      role: "user",
+      content: "Necesito una vista rapida de prioridades del turno de hoy.",
+      createdAt: "2026-03-24T13:43:00.000Z"
     },
     {
-      id: "m2",
-      tone: "assistant",
-      body: "Identifique la capacidad actualizar caso y generar borrador. Falta confirmar si el mensaje es regulatorio o solo operativo."
+      id: "mg2",
+      conversationId: "conv-general",
+      role: "assistant",
+      content: "Prioriza el compresor de planta norte, luego valida la red electrica y por ultimo revisa repuestos bloqueados.",
+      createdAt: "2026-03-24T13:49:00.000Z"
+    }
+  ],
+  "conv-case-2048": conversationMessagesFixture,
+  "conv-case-2035": [
+    {
+      id: "m2035-1",
+      conversationId: "conv-case-2035",
+      role: "user",
+      content: "Necesito una actualizacion breve para el caso de red electrica.",
+      createdAt: "2026-03-24T11:10:00.000Z"
     },
     {
-      id: "m3",
-      tone: "user",
-      body: "Solo operativo. Quiero enviar resumen interno."
-    },
-    {
-      id: "m4",
-      tone: "system",
-      body: "Accion preparada en modo confirmar y ejecutar. Se actualizara el estado y se generara un borrador interno."
+      id: "m2035-2",
+      conversationId: "conv-case-2035",
+      role: "assistant",
+      content: "Aun falta confirmar disponibilidad de cuadrilla para cerrar la visita.",
+      createdAt: "2026-03-24T11:18:00.000Z"
     }
   ]
 };

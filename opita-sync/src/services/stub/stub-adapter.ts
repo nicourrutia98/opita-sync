@@ -1,4 +1,16 @@
-import type { CaseDetail, CaseSummary, ConversationState, DashboardData, OperationalLogEntry, Role, SessionState, TenantConfigData } from "../../domain/opita";
+import type {
+  CaseDetail,
+  CaseSummary,
+  ChatMessage,
+  ChatStreamEvent,
+  ConversationMessagePage,
+  ConversationSummary,
+  DashboardData,
+  OperationalLogEntry,
+  Role,
+  SessionState,
+  TenantConfigData
+} from "../../domain/opita";
 import type { AuthFailureRule, FailureKey } from "../../config/app-env";
 import { clearSession, readSession, writeSession } from "../auth-storage";
 import type {
@@ -7,6 +19,8 @@ import type {
   CaseDetailDto,
   CaseSummaryDto,
   ConversationDto,
+  ConversationMessageDto,
+  ConversationSummaryDto,
   DataReuseConsentDto,
   DashboardDto,
   DraftResponseDto,
@@ -27,6 +41,7 @@ import {
   caseDetailsFixture,
   caseSummariesFixture,
   conversationFixture,
+  conversationMessagesFixture,
   createSessionFixture,
   dashboardFixture,
   draftFixture,
@@ -36,6 +51,8 @@ import {
   governanceActionFixture,
   navigationManifestFixtures,
   operationalLogEntriesFixture,
+  recentConversationFixtures,
+  recentConversationMessagesFixture,
   retentionPolicyFixture,
   tenantConfigFixture,
   toolGovernanceFixture,
@@ -78,8 +95,29 @@ function mapCaseDetailDto(dto: CaseDetailDto): CaseDetail {
   return dto;
 }
 
-function mapConversationDto(dto: ConversationDto): ConversationState {
+function mapConversationDto(dto: ConversationDto) {
   return dto;
+}
+
+function mapConversationSummaryDto(dto: ConversationSummaryDto): ConversationSummary {
+  return dto;
+}
+
+function mapConversationMessageDto(dto: ConversationMessageDto): ChatMessage {
+  return dto;
+}
+
+function buildMessagePage(messages: ConversationMessageDto[], limit = 30, before?: string): ConversationMessagePage {
+  const sorted = [...messages].sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+  const filtered = before ? sorted.filter((item) => `${item.createdAt}:${item.id}` < before) : sorted;
+  const page = filtered.slice(Math.max(0, filtered.length - limit));
+  const remaining = filtered.slice(0, Math.max(0, filtered.length - limit));
+  const prevCursor = remaining.length ? `${remaining[remaining.length - 1].createdAt}:${remaining[remaining.length - 1].id}` : null;
+  return {
+    items: page.map(mapConversationMessageDto),
+    prevCursor,
+    hasMoreBefore: Boolean(remaining.length)
+  };
 }
 
 function mapTenantConfigDto(dto: TenantConfigDto): TenantConfigData {
@@ -120,7 +158,33 @@ export function createStubOpitaAppServices(options: StubAdapterOptions = {}): Op
   const mutableOperationalLogs = clone(operationalLogEntriesFixture);
   const mutableTools = clone(toolGovernanceFixture);
   const mutableDataReuseConsent = clone(dataReuseConsentFixture);
-  const mutableConversation = clone(conversationFixture);
+  const mutableConversations = clone(recentConversationFixtures);
+  const mutableConversationDetails = new Map<string, ConversationDto>([
+    [conversationFixture.id, clone(conversationFixture)],
+    [
+      "conv-general",
+      {
+        id: "conv-general",
+        title: "Coordinacion general del turno",
+        promptDraft: "Resume prioridades y riesgos del turno.",
+        updatedAt: "2026-03-24T13:49:00.000Z"
+      }
+    ],
+    [
+      "conv-case-2035",
+      {
+        id: "conv-case-2035",
+        title: "Seguimiento de red electrica",
+        caseId: "CAS-2035",
+        promptDraft: "Resume el estado del caso y el siguiente bloqueo operativo.",
+        updatedAt: "2026-03-24T11:18:00.000Z"
+      }
+    ]
+  ]);
+  const mutableConversationMessages = new Map<string, ConversationMessageDto[]>(
+    Object.entries(clone(recentConversationMessagesFixture))
+  );
+  const activeRuns = new Map<string, { cancelled: boolean; conversationId: string; userMessage: ConversationMessageDto }>();
   let logCounter = 1;
   if (seedRole && !readSession(storageKey)) {
     writeSession(storageKey, createSessionFixture(seedRole));
@@ -168,6 +232,61 @@ export function createStubOpitaAppServices(options: StubAdapterOptions = {}): Op
     }
 
     return session;
+  }
+
+  function buildConversationTitle(caseId?: string) {
+    return caseId ? `Nuevo chat · ${caseId}` : "Nuevo chat";
+  }
+
+  function isPlaceholderTitle(title: string) {
+    return title === "Nuevo chat" || title.startsWith("Nuevo chat ·") || title.startsWith("Caso ");
+  }
+
+  function buildAutotitle(content: string, fallback = "Nuevo chat") {
+    const normalized = content.replace(/\s+/g, " ").replace(/[.?!,:;]+$/g, "").trim();
+    return normalized ? normalized.slice(0, 64) : fallback;
+  }
+
+  function getConversationSummary(conversationId: string) {
+    const summary = mutableConversations.find((item) => item.id === conversationId);
+    if (!summary) {
+      throw new ServiceError("La conversacion solicitada no existe.", "unknown", 404);
+    }
+    return summary;
+  }
+
+  function getConversationDetail(conversationId: string) {
+    const detail = mutableConversationDetails.get(conversationId);
+    if (!detail) {
+      throw new ServiceError("La conversacion solicitada no existe.", "unknown", 404);
+    }
+    return detail;
+  }
+
+  function createConversationRecord(caseId?: string) {
+    const timestamp = new Date().toISOString();
+    const conversationId = `conv-new-${Date.now()}`;
+    const summary: ConversationSummaryDto = {
+      id: conversationId,
+      title: buildConversationTitle(caseId),
+      caseId,
+      lastMessagePreview: "Sin mensajes todavía.",
+      updatedAt: timestamp,
+      createdAt: timestamp,
+      status: "completed"
+    };
+    const detail: ConversationDto = {
+      id: conversationId,
+      title: summary.title,
+      caseId,
+      promptDraft: caseId ? `Necesito apoyo operativo sobre ${caseId}.` : "",
+      updatedAt: timestamp,
+      createdAt: timestamp
+    };
+    mutableConversations.unshift(summary);
+    mutableConversationDetails.set(conversationId, detail);
+    mutableConversationMessages.set(conversationId, []);
+    return summary;
   }
 
   return {
@@ -223,53 +342,285 @@ export function createStubOpitaAppServices(options: StubAdapterOptions = {}): Op
       }
     },
     chatService: {
-      async getConversation(role) {
+      async listConversations() {
         const session = await requireSession("chat");
         await maybeFail("chat", "No se pudo reconstruir la conversacion.");
-        const conversation = clone(mutableConversation);
-        if (session.bootstrap.role === "supervisor" || role === "supervisor") {
-          conversation.title = "Intencion operativa con contexto de supervisor";
+        return clone(mutableConversations)
+          .filter((conversation) => !conversation.archivedAt)
+          .map((conversation) =>
+            session.bootstrap.role === "supervisor" && conversation.id === "conv-case-2048"
+              ? { ...conversation, title: "Intencion operativa con contexto de supervisor" }
+              : conversation
+          )
+          .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+          .map(mapConversationSummaryDto);
+      },
+      async createConversation(input = {}) {
+        await requireSession("chat");
+        await maybeFail("chat", "No se pudo crear la conversacion.");
+        return mapConversationSummaryDto(clone(createConversationRecord(input.caseId)));
+      },
+      async updateConversation(input) {
+        await requireSession("chat");
+        await maybeFail("chat", "No se pudo actualizar la conversacion.");
+        const summary = getConversationSummary(input.conversationId);
+        const detail = getConversationDetail(input.conversationId);
+        const updatedAt = new Date().toISOString();
+        if (input.title !== undefined) {
+          summary.title = input.title.trim();
+          detail.title = summary.title;
         }
-        return mapConversationDto(conversation);
+        if (input.archived !== undefined) {
+          summary.archivedAt = input.archived ? updatedAt : undefined;
+        }
+        summary.updatedAt = updatedAt;
+        detail.updatedAt = updatedAt;
+        return mapConversationSummaryDto(clone(summary));
+      },
+      async getConversationMessages(input) {
+        await requireSession("chat");
+        await maybeFail("chat", "No se pudo reconstruir la conversacion.");
+        return buildMessagePage(mutableConversationMessages.get(input.conversationId) ?? [], input.limit, input.before);
       },
       async sendMessage(input) {
-        const session = await requireSession("chat");
+        await requireSession("chat");
         await maybeFail("chat", "No se pudo enviar el mensaje.");
-        mutableConversation.messages.push(
+        const createdAt = new Date().toISOString();
+        const runId = `run-stub-${Date.now()}`;
+        const summary = getConversationSummary(input.conversationId);
+        const detail = getConversationDetail(input.conversationId);
+        const userMessage = {
+          id: `stub-user-${Date.now()}`,
+          conversationId: input.conversationId,
+          role: "user" as const,
+          content: input.content,
+          createdAt
+        };
+        const assistantDraftMessage = {
+          id: `stub-assistant-draft-${Date.now()}`,
+          conversationId: input.conversationId,
+          role: "assistant" as const,
+          content: "",
+          createdAt,
+          runId
+        };
+        const nextMessages = [...(mutableConversationMessages.get(input.conversationId) ?? []), userMessage];
+        mutableConversationMessages.set(input.conversationId, nextMessages);
+        detail.promptDraft = input.content;
+        detail.updatedAt = createdAt;
+        if (isPlaceholderTitle(summary.title)) {
+          const nextTitle = buildAutotitle(input.content, summary.title);
+          summary.title = nextTitle;
+          detail.title = nextTitle;
+        }
+        summary.lastMessagePreview = input.content;
+        summary.updatedAt = createdAt;
+        summary.status = "running";
+        activeRuns.set(runId, { cancelled: false, conversationId: input.conversationId, userMessage });
+        return {
+          runId,
+          conversationId: input.conversationId,
+          userMessage: mapConversationMessageDto(userMessage),
+          assistantDraftMessage: mapConversationMessageDto(assistantDraftMessage),
+          conversationSummary: mapConversationSummaryDto(clone(summary))
+        };
+      },
+      async retryLastMessage(input) {
+        await requireSession("chat");
+        await maybeFail("chat", "No se pudo reintentar el mensaje.");
+        const messages = mutableConversationMessages.get(input.conversationId) ?? [];
+        const lastUserMessage = [...messages].reverse().find((message) => message.role === "user");
+        if (!lastUserMessage) {
+          throw new ServiceError("Este hilo no tiene un mensaje de usuario para reintentar.", "unknown", 409);
+        }
+        const createdAt = new Date().toISOString();
+        const runId = `run-stub-${Date.now()}`;
+        const assistantDraftMessage = {
+          id: `stub-assistant-draft-${Date.now()}`,
+          conversationId: input.conversationId,
+          role: "assistant" as const,
+          content: "",
+          createdAt,
+          runId
+        };
+        const summary = getConversationSummary(input.conversationId);
+        const detail = getConversationDetail(input.conversationId);
+        detail.promptDraft = lastUserMessage.content;
+        detail.updatedAt = createdAt;
+        summary.updatedAt = createdAt;
+        summary.status = "running";
+        activeRuns.set(runId, { cancelled: false, conversationId: input.conversationId, userMessage: lastUserMessage });
+        return {
+          runId,
+          conversationId: input.conversationId,
+          userMessage: mapConversationMessageDto(lastUserMessage),
+          assistantDraftMessage: mapConversationMessageDto(assistantDraftMessage),
+          reusedUserMessageId: lastUserMessage.id,
+          conversationSummary: mapConversationSummaryDto(clone(summary))
+        };
+      },
+      async streamAssistantResponse(input) {
+        const runState = activeRuns.get(input.runId);
+        if (!runState) {
+          throw new ServiceError("El run solicitado no existe.", "unknown", 404);
+        }
+        const assistantMessageId = `stub-assistant-final-${Date.now()}`;
+        const completedAt = new Date().toISOString();
+        const finalText = `Respuesta de prueba en tiempo real para ${input.conversationId}. Tomo tu mensaje y deje el siguiente paso accionable listo para el equipo.`;
+        const chunks = ["Respuesta de prueba en tiempo real ", `para ${input.conversationId}. `, "Tomo tu mensaje y deje el siguiente paso ", "accionable listo para el equipo."];
+        const baseEvents: ChatStreamEvent[] = [
           {
-            id: `stub-user-${Date.now()}`,
-            tone: "user",
-            body: input.message
+            type: "run.started",
+            runId: input.runId,
+            conversationId: input.conversationId,
+            messageId: assistantMessageId,
+            userMessageId: runState.userMessage.id,
+            assistantDraftMessageId: assistantMessageId,
+            createdAt: completedAt
           },
           {
-            id: `stub-activity-thinking-${Date.now()}`,
-            tone: "system",
-            body: "[[activity:thinking]] Analizando el nuevo turno y preparando la siguiente accion."
+            type: "status.changed",
+            runId: input.runId,
+            conversationId: input.conversationId,
+            messageId: assistantMessageId,
+            phase: "thinking",
+            label: "Pensando",
+            detail: "Analizando el turno actual y el contexto disponible."
           },
           {
-            id: `stub-activity-reasoning-${Date.now()}`,
-            tone: "system",
-            body: "[[activity:reasoning]] Organizando el contexto operativo y el historial visible."
+            type: "context.reading",
+            runId: input.runId,
+            conversationId: input.conversationId,
+            messageId: assistantMessageId,
+            detail: "Revisando mensajes previos y el contexto asociado."
           },
           {
-            id: `stub-activity-tool-${Date.now()}`,
-            tone: "system",
-            body: "[[activity:tool]] Consultando el proveedor configurado para responder desde el orquestador."
+            type: "tool.started",
+            runId: input.runId,
+            conversationId: input.conversationId,
+            messageId: assistantMessageId,
+            toolCallId: `${input.runId}:tenant-context:started`,
+            toolName: "tenant-context",
+            detail: "Consolidando contexto operativo del hilo.",
+            createdAt: completedAt
           },
           {
-            id: `stub-assistant-${Date.now()}`,
-            tone: "assistant",
-            body: `Respuesta de prueba para ${session.bootstrap.tenant.name}: ${input.message}`
+            type: "tool.completed",
+            runId: input.runId,
+            conversationId: input.conversationId,
+            messageId: assistantMessageId,
+            toolCallId: `${input.runId}:tenant-context:completed`,
+            toolName: "tenant-context",
+            detail: "Contexto operativo listo para responder.",
+            createdAt: completedAt
           },
           {
-            id: `stub-activity-ready-${Date.now()}`,
-            tone: "system",
-            body: "[[activity:ready]] Respuesta lista desde el proveedor configurado."
+            type: "tool.started",
+            runId: input.runId,
+            conversationId: input.conversationId,
+            messageId: assistantMessageId,
+            toolCallId: `${input.runId}:assistant-provider:started`,
+            toolName: "assistant-provider",
+            detail: "Consultando el proveedor stub del asistente.",
+            createdAt: completedAt
+          },
+          {
+            type: "tool.progress",
+            runId: input.runId,
+            conversationId: input.conversationId,
+            messageId: assistantMessageId,
+            toolCallId: `${input.runId}:assistant-provider:progress`,
+            toolName: "assistant-provider",
+            detail: "Validando la mejor respuesta operativa.",
+            createdAt: completedAt
           }
-        );
-        mutableConversation.promptDraft = input.message;
-        return clone(mutableConversation);
-      }
+        ];
+
+        for (const event of baseEvents) {
+          if (runState.cancelled || input.signal?.aborted) {
+            input.onEvent({ type: "run.cancelled", runId: input.runId, conversationId: input.conversationId });
+            return;
+          }
+          input.onEvent(event);
+          await delay(140);
+        }
+
+        let accumulated = "";
+        for (const chunk of chunks) {
+          if (runState.cancelled || input.signal?.aborted) {
+            input.onEvent({ type: "run.cancelled", runId: input.runId, conversationId: input.conversationId });
+            return;
+          }
+          accumulated += chunk;
+          input.onEvent({
+            type: "status.changed",
+            runId: input.runId,
+            conversationId: input.conversationId,
+            messageId: assistantMessageId,
+            phase: "drafting",
+            label: "Redactando respuesta",
+            detail: "El asistente esta redactando la respuesta final."
+          });
+          input.onEvent({
+            type: "message.delta",
+            runId: input.runId,
+            conversationId: input.conversationId,
+            messageId: assistantMessageId,
+            delta: chunk
+          });
+          await delay(120);
+        }
+
+        const completedMessage = {
+          id: assistantMessageId,
+          conversationId: input.conversationId,
+          role: "assistant" as const,
+          content: finalText,
+          createdAt: completedAt,
+          runId: input.runId
+        };
+        mutableConversationMessages.set(input.conversationId, [...(mutableConversationMessages.get(input.conversationId) ?? []), completedMessage]);
+        const summary = mutableConversations.find((item) => item.id === input.conversationId);
+        if (summary) {
+          summary.lastMessagePreview = finalText;
+          summary.updatedAt = completedAt;
+          summary.status = "completed";
+        }
+        const detail = mutableConversationDetails.get(input.conversationId);
+        if (detail) {
+          detail.updatedAt = completedAt;
+        }
+        input.onEvent({
+          type: "tool.completed",
+          runId: input.runId,
+          conversationId: input.conversationId,
+          messageId: assistantMessageId,
+          toolCallId: `${input.runId}:assistant-provider:completed`,
+          toolName: "assistant-provider",
+          detail: "Proveedor stub completó la respuesta.",
+          createdAt: completedAt
+        });
+        input.onEvent({
+          type: "message.completed",
+          runId: input.runId,
+          conversationId: input.conversationId,
+          message: mapConversationMessageDto(completedMessage)
+        });
+        input.onEvent({
+          type: "run.completed",
+          runId: input.runId,
+          conversationId: input.conversationId,
+          provider: "stub",
+          model: "stub-orchestrator"
+        });
+        activeRuns.delete(input.runId);
+      },
+      async cancelRun(input) {
+        const runState = activeRuns.get(input.runId);
+        if (runState) {
+          runState.cancelled = true;
+        }
+      },
     },
     tenantConfigService: {
       async getTenantConfig() {

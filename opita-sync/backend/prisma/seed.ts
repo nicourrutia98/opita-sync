@@ -1,7 +1,17 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient, RoleKey, CaseStatus, CasePriority, MessageTone, PolicyMode, ToolRiskLevel, ToolCertificationState, GovernanceActionStatus } from "@prisma/client";
+import { loadRootEnv } from "../src/load-root-env.js";
+
+loadRootEnv();
 
 const prisma = new PrismaClient();
+
+const assistantSeedConfig = {
+  provider: (process.env.OPITA_PROVISION_AI_PROVIDER ?? "gemini").trim().toLowerCase(),
+  baseUrl: process.env.OPITA_PROVISION_AI_BASE_URL ?? "https://generativelanguage.googleapis.com/v1beta",
+  apiKey: process.env.OPITA_PROVISION_AI_API_KEY ?? "",
+  model: process.env.OPITA_PROVISION_AI_MODEL ?? "gemini-2.5-flash"
+};
 
 async function ensureRole(role: RoleKey, label: string) {
   return prisma.role.upsert({
@@ -9,6 +19,53 @@ async function ensureRole(role: RoleKey, label: string) {
     update: { label },
     create: { key: role, label }
   });
+}
+
+async function ensureConversationForUser({
+  tenantId,
+  userId,
+  fullName,
+  caseId,
+  caseCode,
+  caseTitle
+}: {
+  tenantId: string;
+  userId: string;
+  fullName: string;
+  caseId?: string;
+  caseCode?: string;
+  caseTitle?: string;
+}) {
+  const existing = await prisma.conversation.findFirst({
+    where: { tenantId, userId },
+    orderBy: { updatedAt: "desc" }
+  });
+
+  if (existing) {
+    return existing;
+  }
+
+  const conversation = await prisma.conversation.create({
+    data: {
+      tenantId,
+      caseId: caseId ?? null,
+      userId,
+      title: caseCode && caseTitle ? `${caseCode} · ${caseTitle}` : "Orquestador Opita Sync",
+      promptDraft: caseCode ? `Necesito apoyo operativo sobre ${caseCode}.` : "Necesito ayuda para continuar mi turno operativo."
+    }
+  });
+
+  await prisma.conversationMessage.create({
+    data: {
+      tenantId,
+      conversationId: conversation.id,
+      authorId: null,
+      tone: MessageTone.assistant,
+      body: `Hola ${fullName}. Estoy listo para ayudarte con Opita Sync apenas escribas el primer mensaje.`
+    }
+  });
+
+  return conversation;
 }
 
 async function main() {
@@ -173,10 +230,10 @@ async function main() {
     { parameterId: params[0].id, value: "Media" },
     { parameterId: params[1].id, value: "Nuevo, En curso, Bloqueado, Resuelto" },
     { parameterId: params[2].id, value: "Operativo formal" },
-    { parameterId: params[3].id, value: "openai" },
-    { parameterId: params[4].id, value: "https://api.openai.com/v1" },
-    { parameterId: params[5].id, value: "" },
-    { parameterId: params[6].id, value: "gpt-4.1-mini" }
+    { parameterId: params[3].id, value: assistantSeedConfig.provider || "gemini" },
+    { parameterId: params[4].id, value: assistantSeedConfig.baseUrl },
+    { parameterId: params[5].id, value: assistantSeedConfig.apiKey },
+    { parameterId: params[6].id, value: assistantSeedConfig.model }
   ];
   for (const p of paramValues) {
     await prisma.tenantParameterValue.upsert({
@@ -237,22 +294,50 @@ async function main() {
     create: { tenantId: tenants[0].id, caseId: cases[0].id, userId: users[1].id }
   });
 
-  const convo = await prisma.conversation.create({
-    data: {
-      tenantId: tenants[0].id,
-      caseId: cases[0].id,
-      userId: users[1].id,
-      title: "Intencion operativa con contexto",
-      promptDraft: "Resume condición del compresor y propone siguiente paso."
-    }
+  const convo = await ensureConversationForUser({
+    tenantId: tenants[0].id,
+    userId: users[1].id,
+    fullName: "Laura Rojas",
+    caseId: cases[0].id,
+    caseCode: "CAS-2048",
+    caseTitle: "Falla intermitente en compresor principal"
   });
-  await prisma.conversationMessage.createMany({
-    data: [
-      { tenantId: tenants[0].id, conversationId: convo.id, authorId: users[1].id, tone: MessageTone.user, body: "Necesito actualizar caso y notificar supervisor." },
-      { tenantId: tenants[0].id, conversationId: convo.id, authorId: null, tone: MessageTone.assistant, body: "Capacidad detectada: actualizar caso y generar borrador." }
-    ]
+  const existingConvoMessages = await prisma.conversationMessage.count({
+    where: { tenantId: tenants[0].id, conversationId: convo.id }
   });
+  if (existingConvoMessages < 3) {
+    await prisma.conversationMessage.createMany({
+      data: [
+        { tenantId: tenants[0].id, conversationId: convo.id, authorId: users[1].id, tone: MessageTone.user, body: "Necesito actualizar caso y notificar supervisor." },
+        { tenantId: tenants[0].id, conversationId: convo.id, authorId: null, tone: MessageTone.assistant, body: "Capacidad detectada: actualizar caso y generar borrador." }
+      ]
+    });
+  }
 
+  await ensureConversationForUser({
+    tenantId: tenants[0].id,
+    userId: users[0].id,
+    fullName: "Ana Pineda",
+    caseId: cases[0].id,
+    caseCode: "CAS-2048",
+    caseTitle: "Falla intermitente en compresor principal"
+  });
+  await ensureConversationForUser({
+    tenantId: tenants[0].id,
+    userId: users[2].id,
+    fullName: "Diego Gil",
+    caseId: cases[1].id,
+    caseCode: "CAS-2035",
+    caseTitle: "Revision de valvula de seguridad"
+  });
+  await ensureConversationForUser({
+    tenantId: tenants[0].id,
+    userId: users[3].id,
+    fullName: "Paula Mejia",
+    caseId: cases[0].id,
+    caseCode: "CAS-2048",
+    caseTitle: "Falla intermitente en compresor principal"
+  });
   await prisma.operationalLogEntry.create({
     data: {
       tenantId: tenants[0].id,
@@ -348,3 +433,5 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
+

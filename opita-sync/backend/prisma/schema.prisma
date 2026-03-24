@@ -78,6 +78,25 @@ enum GovernanceActionStatus {
   blocked
 }
 
+enum AssistantRunStatus {
+  queued
+  running
+  completed
+  error
+  cancelled
+}
+
+enum AssistantRunPhase {
+  thinking
+  reasoning
+  using_tool
+  reading_context
+  drafting
+  completed
+  error
+  cancelled
+}
+
 enum ReleaseChannel {
   staging
   production
@@ -96,6 +115,7 @@ model Tenant {
   caseStatusHistory   CaseStatusHistory[]
   conversations       Conversation[]
   conversationMessages ConversationMessage[]
+  assistantRuns       AssistantRun[]
   operationalLogEntries OperationalLogEntry[]
   operationalEvidence OperationalEvidence[]
   sessions            Session[]
@@ -257,14 +277,17 @@ model Conversation {
   userId      String
   title       String
   promptDraft String
+  archivedAt  DateTime?
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
   tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   case        Case?                @relation(fields: [caseId], references: [id], onDelete: SetNull)
   user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages    ConversationMessage[]
+  runs        AssistantRun[]
 
   @@index([tenantId, caseId])
+  @@index([tenantId, userId, archivedAt, updatedAt])
 }
 
 model ConversationMessage {
@@ -274,12 +297,36 @@ model ConversationMessage {
   authorId       String?
   tone           MessageTone
   body           String
+  runId          String?
   createdAt      DateTime    @default(now())
   tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   author         User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  run            AssistantRun? @relation("RunMessages", fields: [runId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, conversationId, createdAt])
+}
+
+model AssistantRun {
+  id                 String               @id @default(cuid())
+  tenantId           String
+  conversationId     String
+  userMessageId      String?
+  assistantMessageId String?
+  status             AssistantRunStatus   @default(queued)
+  phase              AssistantRunPhase    @default(thinking)
+  provider           String?
+  model              String?
+  errorMessage       String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  completedAt        DateTime?
+  cancelledAt        DateTime?
+  tenant             Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation       Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  messages           ConversationMessage[] @relation("RunMessages")
+
+  @@index([tenantId, conversationId, updatedAt])
 }
 
 model OperationalLogEntry {

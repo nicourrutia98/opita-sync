@@ -16,6 +16,8 @@
 
 ## Frontend Policy
 - For UI changes, validate content, states, accessibility, responsive behavior, and critical actions.
+- Use ui-view-audit when building, redesigning, auditing, or refining views, screens, layouts, dashboards, chat flows, forms, sidebars, or visual components.
+- Skip ui-view-audit for backend-only, infrastructure, data-only, or non-visual logic tasks.
 - Do not close UI work without evidence for loading, empty, error, and success states when relevant.
 
 ## Testing Policy

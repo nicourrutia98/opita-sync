@@ -19,21 +19,21 @@ export function AuthShell({ theme, title, description, status, children }: AuthS
   return (
     <div
       data-theme={theme}
-      className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(75,169,221,0.12),_transparent_32%),linear-gradient(180deg,rgba(247,249,252,0.98)_0%,rgba(240,244,248,0.96)_100%)] text-ink"
+      className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(15,118,110,0.14),_transparent_34%),linear-gradient(180deg,rgba(248,250,252,0.98)_0%,rgba(240,244,248,0.94)_100%)] text-ink"
     >
-      <div className="mx-auto flex min-h-screen max-w-[1440px] items-center justify-center px-4 py-8 md:px-6">
-        <section className="w-full max-w-[520px] rounded-[34px] border border-line/90 bg-panel/95 p-6 shadow-[0_26px_70px_rgba(15,23,42,0.12)] backdrop-blur md:p-8">
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <BrandLockup theme={theme} />
-              <div>
-                <h1 className="text-[2rem] font-semibold tracking-[-0.03em] text-ink md:text-[2.35rem]">{title}</h1>
-                <p className="mt-2 text-sm leading-6 text-muted md:text-[15px]">{description}</p>
+      <div className="mx-auto flex min-h-screen max-w-[1440px] items-center justify-center px-4 py-10 md:px-6 md:py-12">
+        <section className="w-full max-w-[480px] rounded-[32px] border border-white/70 bg-panel/92 p-6 shadow-[0_28px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl md:p-9">
+          <div className="space-y-8">
+            <div className="space-y-5">
+              <BrandLockup theme={theme} className="gap-3.5" />
+              <div className="space-y-2">
+                <h1 className="text-[2rem] font-semibold tracking-[-0.04em] text-ink md:text-[2.5rem]">{title}</h1>
+                <p className="max-w-[32rem] text-sm leading-6 text-muted md:text-[15px]">{description}</p>
               </div>
             </div>
 
             {status && (
-              <div className="rounded-[24px] border border-line/80 bg-surface/90 p-4">
+              <div className="rounded-[22px] border border-line/80 bg-surface/85 p-4">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-brand-strong" />
                   <div>
@@ -44,7 +44,7 @@ export function AuthShell({ theme, title, description, status, children }: AuthS
               </div>
             )}
 
-            <div className="rounded-[28px] border border-line/80 bg-surface/70 p-4 md:p-5">{children}</div>
+            <div>{children}</div>
           </div>
         </section>
       </div>

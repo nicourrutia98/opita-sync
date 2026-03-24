@@ -1,20 +1,67 @@
-import * as React from "react";
+﻿import * as React from "react";
 import { LayoutGrid, LogOut, Moon, SunMedium } from "lucide-react";
 import { actorViews, type Role, type ThemeMode, type ViewKey, viewLabels } from "../../domain/opita";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { BrandLockup } from "./brand-lockup";
-import caseIcon from "../../../opita-sync-visual-closure/icons/svg/20/opita-sync-icon-case-20.svg";
-import conversationIcon from "../../../opita-sync-visual-closure/icons/svg/20/opita-sync-icon-conversation-20.svg";
-import settingsIcon from "../../../opita-sync-visual-closure/icons/svg/20/opita-sync-icon-settings-20.svg";
-import trackStatusIcon from "../../../opita-sync-visual-closure/icons/svg/20/opita-sync-icon-track-status-20.svg";
 
-const iconMap: Record<ViewKey, { type: "svg" | "component"; value: string | React.ComponentType<{ className?: string }> }> = {
-  inicio: { type: "component", value: LayoutGrid },
-  chat: { type: "svg", value: conversationIcon },
-  casos: { type: "svg", value: caseIcon },
-  detalle: { type: "svg", value: trackStatusIcon },
-  configuracion: { type: "svg", value: settingsIcon }
+type AppNavIconProps = { className?: string };
+
+function ConversationNavIcon({ className }: AppNavIconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.625" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="4" y="5" width="16" height="12" rx="4" ry="4" />
+      <line x1="8" y1="17" x2="7" y2="20" />
+      <line x1="10" y1="17" x2="7" y2="20" />
+    </svg>
+  );
+}
+
+function CaseNavIcon({ className }: AppNavIconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.625" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="6" y="4" width="12" height="16" rx="3" ry="3" />
+      <line x1="9" y1="8" x2="15" y2="8" />
+      <line x1="9" y1="12" x2="15" y2="12" />
+      <line x1="9" y1="16" x2="13" y2="16" />
+    </svg>
+  );
+}
+
+function DetailNavIcon({ className }: AppNavIconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.625" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="7" cy="17" r="2" />
+      <circle cx="12" cy="12" r="2" />
+      <circle cx="17" cy="7" r="2" />
+      <line x1="8.5" y1="15.5" x2="10.5" y2="13.5" />
+      <line x1="13.5" y1="10.5" x2="15.5" y2="8.5" />
+    </svg>
+  );
+}
+
+function SettingsNavIcon({ className }: AppNavIconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.625" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="3.5" />
+      <line x1="12" y1="3" x2="12" y2="6" />
+      <line x1="12" y1="18" x2="12" y2="21" />
+      <line x1="3" y1="12" x2="6" y2="12" />
+      <line x1="18" y1="12" x2="21" y2="12" />
+      <line x1="5.5" y1="5.5" x2="7.5" y2="7.5" />
+      <line x1="16.5" y1="16.5" x2="18.5" y2="18.5" />
+      <line x1="5.5" y1="18.5" x2="7.5" y2="16.5" />
+      <line x1="16.5" y1="7.5" x2="18.5" y2="5.5" />
+    </svg>
+  );
+}
+
+const iconMap: Record<ViewKey, React.ComponentType<{ className?: string }>> = {
+  inicio: LayoutGrid,
+  chat: ConversationNavIcon,
+  casos: CaseNavIcon,
+  detalle: DetailNavIcon,
+  configuracion: SettingsNavIcon
 };
 
 interface AppShellProps {
@@ -117,22 +164,23 @@ export function AppShell({
               <BrandLockup theme={theme} />
               <nav className="flex flex-wrap gap-2">
                 {desktopViews.map((item) => {
-                  const icon = iconMap[item];
+                  const Icon = iconMap[item];
+                  const active = view === item;
+
                   return (
                     <button
                       key={item}
                       type="button"
                       onClick={() => onViewChange(item)}
+                      aria-current={active ? "page" : undefined}
                       className={cn(
-                        "flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-medium transition",
-                        view === item ? "bg-ink text-panel shadow-[0_12px_24px_rgba(15,23,42,0.16)]" : "border border-line bg-panel text-subtle hover:bg-surface"
+                        "flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+                        active
+                          ? "border-ink bg-ink text-panel shadow-[0_12px_24px_rgba(15,23,42,0.16)]"
+                          : "border-line bg-panel text-ink hover:border-line/90 hover:bg-surface hover:text-ink"
                       )}
                     >
-                      {icon.type === "svg" ? (
-                        <img alt="" aria-hidden="true" src={icon.value as string} className="h-4 w-4" />
-                      ) : (
-                        React.createElement(icon.value as React.ComponentType<{ className?: string }>, { className: "h-4 w-4" })
-                      )}
+                      <Icon className="h-4 w-4 shrink-0 text-current" />
                       {viewLabels[item]}
                     </button>
                   );
@@ -156,7 +204,7 @@ export function AppShell({
               </Button>
               <Button variant="ghost" size="sm" onClick={onSignOut} className="gap-2">
                 <LogOut className="h-4 w-4" />
-                Cerrar sesion
+                Cerrar sesión
               </Button>
             </div>
           </div>
@@ -173,7 +221,7 @@ export function AppShell({
                       onViewChange(actorViews[item.id][0]);
                     }}
                     className={cn(
-                      "rounded-2xl border px-3 py-2 text-sm transition",
+                      "rounded-2xl border px-3 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
                       role === item.id ? "border-brand bg-brand text-white" : "border-line bg-panel text-ink hover:border-brand-soft hover:bg-surface"
                     )}
                   >
@@ -185,39 +233,41 @@ export function AppShell({
           </div>
         </header>
 
-        <div className="mt-4 flex flex-1 flex-col overflow-hidden md:hidden">
+        <div className={cn("mt-4 flex min-h-0 flex-1 flex-col overflow-hidden md:hidden", isChat && "pb-24")}>
           <main
             ref={mobileMainRef}
-            className={cn("flex-1 pb-24", isChat ? "flex flex-col overflow-hidden" : "overflow-y-auto")}
+            className={cn(
+              "min-h-0 flex-1",
+              isChat ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "overflow-y-auto pb-24"
+            )}
           >
             {children}
           </main>
         </div>
 
-        <div className="mt-4 hidden min-h-0 flex-1 md:flex">
-          <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
+        <div className="mt-4 hidden min-h-0 flex-1 overflow-hidden md:flex">
+          <main className={cn("min-h-0 flex-1", isChat ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "overflow-hidden")}>{children}</main>
         </div>
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line/90 bg-panel/95 px-4 py-3 backdrop-blur md:hidden">
         <div className={cn("mx-auto grid max-w-lg gap-2", navCount === 3 ? "grid-cols-3" : "grid-cols-4")}>
           {availableViews.slice(0, navCount).map((item) => {
-            const icon = iconMap[item];
+            const Icon = iconMap[item];
+            const active = view === item;
+
             return (
               <button
                 key={item}
                 type="button"
                 onClick={() => onViewChange(item)}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-[11px] font-medium",
-                  view === item ? "bg-ink text-panel" : "text-muted hover:bg-surface"
+                  "flex flex-col items-center justify-center rounded-2xl border border-transparent px-2 py-2 text-[11px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+                  active ? "bg-ink text-panel shadow-[0_8px_20px_rgba(15,23,42,0.14)]" : "text-ink hover:bg-surface"
                 )}
               >
-                {icon.type === "svg" ? (
-                  <img alt="" aria-hidden="true" src={icon.value as string} className="mb-1 h-4 w-4" />
-                ) : (
-                  React.createElement(icon.value as React.ComponentType<{ className?: string }>, { className: "mb-1 h-4 w-4" })
-                )}
+                <Icon className="mb-1 h-4 w-4 text-current" />
                 {viewLabels[item]}
               </button>
             );

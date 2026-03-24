@@ -4,16 +4,23 @@ import type {
   CapabilityItem,
   CaseDetail,
   CaseSummary,
-  ConversationState,
+  CancelRunInput,
+  ChatTransport,
+  ConversationMessagePage,
+  ConversationMessagesInput,
+  ConversationSummary,
   DashboardData,
   DataReuseConsent,
   DraftRequestInput,
   GlobalGovernanceActionResult,
   GlobalGovernanceState,
+  ListConversationsInput,
   NavigationManifestByRole,
   OperationalLogCreateInput,
   OperationalLogEntry,
   Role,
+  SendMessageInput,
+  SendMessageResult,
   SessionState,
   AssistantConnectionStatus,
   TenantConfigData,
@@ -41,8 +48,15 @@ export interface CaseService {
 }
 
 export interface ChatService {
-  getConversation(role: Role, caseId?: string): Promise<ConversationState>;
-  sendMessage(input: { role: Role; caseId?: string; message: string }): Promise<ConversationState>;
+  listConversations(input?: ListConversationsInput): Promise<ConversationSummary[]>;
+  createConversation(input?: { caseId?: string }): Promise<ConversationSummary>;
+  updateConversation(input: { conversationId: string; title?: string; archived?: boolean }): Promise<ConversationSummary>;
+  getConversationMessages(input: ConversationMessagesInput): Promise<ConversationMessagePage>;
+  sendMessage(input: SendMessageInput): Promise<SendMessageResult>;
+  retryLastMessage(input: { conversationId: string }): Promise<SendMessageResult>;
+  streamAssistantResponse: ChatTransport["streamAssistantResponse"];
+  cancelRun(input: CancelRunInput): Promise<void>;
+  subscribeConversationUpdates?: ChatTransport["subscribeConversationUpdates"];
 }
 
 export interface TenantConfigService {
