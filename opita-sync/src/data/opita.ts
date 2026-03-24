@@ -18,7 +18,7 @@ export const roles: Array<{ id: Role; label: string; description: string }> = [
   { id: "solicitante", label: "Solicitante", description: "Reporta, consulta y hace seguimiento desde movil." },
   { id: "tecnico", label: "Tecnico", description: "Opera casos, bitacora y comunicacion asistida." },
   { id: "supervisor", label: "Supervisor", description: "Gestiona bloqueos, aprobaciones y valor operativo." },
-  { id: "admin", label: "Admin tenant", description: "Administra catalogos, parametros y reporting." }
+  { id: "admin", label: "Administrador", description: "Organiza ajustes, herramientas y seguimiento general." }
 ];
 
 export const cases: CaseItem[] = [

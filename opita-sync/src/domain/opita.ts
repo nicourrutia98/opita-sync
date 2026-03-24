@@ -67,6 +67,13 @@ export interface ConversationState {
   messages: ChatMessage[];
 }
 
+export interface AssistantConnectionStatus {
+  ok: boolean;
+  provider: string;
+  model: string;
+  detail: string;
+}
+
 export interface TenantConfigData {
   activeCapabilities: string;
   limits: string;
@@ -234,14 +241,14 @@ export const roles: RoleOption[] = [
   { id: "solicitante", label: "Solicitante", description: "Reporta, consulta y hace seguimiento desde movil." },
   { id: "tecnico", label: "Tecnico", description: "Opera casos, bitacora y comunicacion asistida." },
   { id: "supervisor", label: "Supervisor", description: "Gestiona bloqueos, aprobaciones y valor operativo." },
-  { id: "admin", label: "Admin tenant", description: "Administra catalogos, parametros y reporting." }
+  { id: "admin", label: "Administrador", description: "Organiza ajustes, herramientas y seguimiento general." }
 ];
 
 export const actorViews: Record<Role, ViewKey[]> = {
   solicitante: ["inicio", "chat", "casos", "detalle"],
   tecnico: ["inicio", "chat", "casos", "detalle"],
   supervisor: ["inicio", "chat", "casos", "detalle"],
-  admin: ["inicio", "casos", "configuracion"]
+  admin: ["chat", "inicio", "casos", "detalle", "configuracion"]
 };
 
 export const viewLabels: Record<ViewKey, string> = {

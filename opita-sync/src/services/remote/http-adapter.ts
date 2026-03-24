@@ -7,6 +7,7 @@ import type {
   ConversationState,
   DashboardData,
   DataReuseConsent,
+  AssistantConnectionStatus,
   GlobalGovernanceActionResult,
   GlobalGovernanceState,
   NavigationManifestByRole,
@@ -26,6 +27,7 @@ import type {
   CaseDetailDto,
   CaseSummaryDto,
   ConversationDto,
+  AssistantConnectionStatusDto,
   DataReuseConsentDto,
   DraftRequestDto,
   DraftResponseDto,
@@ -42,6 +44,7 @@ import type {
   SetCapabilityStateDto,
   SignInRequestDto,
   SignInResponseDto,
+  SendChatMessageDto,
   TenantConfigDto,
   ToolGovernanceDto,
   UsageAttributionDto,
@@ -59,14 +62,14 @@ interface HttpAdapterOptions {
   storageKey: string;
 }
 
-function mapHttpError(status: number): ServiceError {
+function mapHttpError(status: number, message?: string): ServiceError {
   if (status === 401) {
-    return new ServiceError("La sesion expiro. Inicia sesion nuevamente.", "session_expired", 401);
+    return new ServiceError(message ?? "La sesion expiro. Inicia sesion nuevamente.", "session_expired", 401);
   }
   if (status === 403) {
-    return new ServiceError("Tu rol no puede acceder a esta vista.", "access_denied", 403);
+    return new ServiceError(message ?? "Tu rol no puede acceder a esta vista.", "access_denied", 403);
   }
-  return new ServiceError(`Request failed with status ${status}`, "unknown", status);
+  return new ServiceError(message ?? `Request failed with status ${status}`, "unknown", status);
 }
 
 async function fetchJson<T>(
@@ -97,7 +100,18 @@ async function fetchJson<T>(
   });
 
   if (!response.ok) {
-    throw mapHttpError(response.status);
+    let message: string | undefined;
+    try {
+      const payload = await response.json();
+      message = payload?.message ?? payload?.detail ?? payload?.error;
+    } catch {
+      try {
+        message = await response.text();
+      } catch {
+        message = undefined;
+      }
+    }
+    throw mapHttpError(response.status, message?.trim() ? message.trim() : undefined);
   }
 
   return (await response.json()) as T;
@@ -204,6 +218,14 @@ export function createHttpOpitaAppServices({ apiBaseUrl, storageKey }: HttpAdapt
           token: session.accessToken,
           params: { role, caseId }
         });
+      },
+      async sendMessage(input): Promise<ConversationState> {
+        const session = getRequiredSession(storageKey);
+        return await fetchJson<ConversationDto>(apiBaseUrl, "chat/message", {
+          method: "POST",
+          token: session.accessToken,
+          body: { caseId: input.caseId, message: input.message } satisfies SendChatMessageDto
+        });
       }
     },
     tenantConfigService: {
@@ -217,6 +239,13 @@ export function createHttpOpitaAppServices({ apiBaseUrl, storageKey }: HttpAdapt
           method: "POST",
           token: session.accessToken,
           body: input satisfies UpdateTenantParameterDto
+        });
+      },
+      async testAssistantConnection(): Promise<AssistantConnectionStatus> {
+        const session = getRequiredSession(storageKey);
+        return await fetchJson<AssistantConnectionStatusDto>(apiBaseUrl, "tenant-config/test-ai", {
+          method: "POST",
+          token: session.accessToken
         });
       }
     },

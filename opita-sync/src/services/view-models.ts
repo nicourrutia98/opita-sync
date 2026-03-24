@@ -9,6 +9,7 @@ import type {
   DashboardData,
   GlobalGovernanceActionResult,
   GlobalGovernanceState,
+  AssistantConnectionStatus,
   NavigationManifestByRole,
   OperationalLogEntry,
   OperationalMetric,
@@ -46,6 +47,7 @@ export interface DashboardViewModel {
 }
 
 export interface ConversationViewModel extends ConversationState {}
+export interface AssistantConnectionStatusViewModel extends AssistantConnectionStatus {}
 
 export interface TenantConfigViewModel extends TenantConfigData {}
 export interface OperationalLogViewModel extends OperationalLogEntry {}
@@ -75,6 +77,10 @@ export function toCaseDetailViewModel(item: CaseDetail): CaseDetailViewModel {
 }
 
 export function toConversationViewModel(data: ConversationState): ConversationViewModel {
+  return data;
+}
+
+export function toAssistantConnectionStatusViewModel(data: AssistantConnectionStatus): AssistantConnectionStatusViewModel {
   return data;
 }
 

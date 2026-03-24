@@ -1,0 +1,11 @@
+{
+  "name": "spec-hub",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node ../../node_modules/typescript/bin/tsc -p tsconfig.json",
+    "start": "npm run build --silent && node dist/src/server.js",
+    "test": "npm run build --silent && node --test dist/tests/**/*.test.js"
+  }
+}

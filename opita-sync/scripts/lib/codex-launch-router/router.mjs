@@ -43,6 +43,40 @@ const riskWeights = {
   high: 4
 };
 
+/** @type {Record<string, number>} */
+const implementationKindWeights = {
+  small_patch: -1,
+  feature: 1,
+  refactor: 2,
+  architecture: 3,
+  audit: 2,
+  migration: 3,
+  frontend_ui: 1,
+  backend_api: 2
+};
+
+/** @type {Record<string, number>} */
+const gapSeverityWeights = {
+  none: 0,
+  minor: 1,
+  important: 3,
+  critical: 5
+};
+
+/** @type {Record<string, number>} */
+const improvementModeWeights = {
+  none: 0,
+  suggested: 0,
+  applied_safe_improvement: 1
+};
+
+/** @type {Record<string, number>} */
+const improvementSizeWeights = {
+  none: 0,
+  small: 1,
+  medium: 2
+};
+
 const keywordSignals = [
   { pattern: /\bsecurity|auth|permission|credential|secret|compliance\b/i, score: 3, code: "security_signal" },
   { pattern: /\brefactor|migration|schema|incident|postmortem|rollback\b/i, score: 2, code: "complex_change_signal" },
@@ -82,6 +116,11 @@ function estimatePromptScore(prompt) {
  * risk_level?: string,
  * needs_tools?: boolean,
  * file_count?: number,
+ * implementation_kind?: string,
+ * gap_severity?: string,
+ * gap_count?: number,
+ * improvement_mode?: string,
+ * improvement_size?: string,
  * force_profile?: string
  * }} input
  */
@@ -99,6 +138,9 @@ export function routeCodexLaunch(input = {}) {
       service_tier: forced.service_tier,
       score: 0,
       rationale_codes: ["forced_profile"],
+      implementation_kind: `${input.implementation_kind ?? "feature"}`,
+      gap_summary: buildGapSummary(input),
+      improvement_summary: buildImprovementSummary(input),
       command_mode_ready: true
     };
   }
@@ -120,6 +162,41 @@ export function routeCodexLaunch(input = {}) {
   score += riskScore;
   if (riskScore > 0) {
     rationale.push(`risk_${riskLevel}`);
+  }
+
+  const implementationKind = `${input.implementation_kind ?? "feature"}`.toLowerCase();
+  const implementationScore = implementationKindWeights[implementationKind] ?? 1;
+  score += implementationScore;
+  rationale.push(`implementation_${implementationKind}`);
+
+  const gapSeverity = `${input.gap_severity ?? "none"}`.toLowerCase();
+  const gapSeverityScore = gapSeverityWeights[gapSeverity] ?? 0;
+  score += gapSeverityScore;
+  if (gapSeverityScore > 0) {
+    rationale.push(`gap_${gapSeverity}`);
+  }
+
+  const gapCount = Number.isFinite(input.gap_count) ? Number(input.gap_count) : 0;
+  if (gapCount >= 3) {
+    score += 2;
+    rationale.push("many_gaps");
+  } else if (gapCount >= 1) {
+    score += 1;
+    rationale.push("few_gaps");
+  }
+
+  const improvementMode = `${input.improvement_mode ?? "none"}`.toLowerCase();
+  const improvementModeScore = improvementModeWeights[improvementMode] ?? 0;
+  score += improvementModeScore;
+  if (improvementModeScore > 0) {
+    rationale.push(`improvement_${improvementMode}`);
+  }
+
+  const improvementSize = `${input.improvement_size ?? "none"}`.toLowerCase();
+  const improvementSizeScore = improvementSizeWeights[improvementSize] ?? 0;
+  score += improvementSizeScore;
+  if (improvementSizeScore > 0) {
+    rationale.push(`improvement_size_${improvementSize}`);
   }
 
   if (input.needs_tools) {
@@ -156,6 +233,9 @@ export function routeCodexLaunch(input = {}) {
     service_tier: selectedProfile.service_tier,
     score,
     rationale_codes: rationale,
+    implementation_kind: implementationKind,
+    gap_summary: buildGapSummary(input),
+    improvement_summary: buildImprovementSummary(input),
     command_mode_ready: true
   };
 }
@@ -179,4 +259,28 @@ export function buildCodexCommand(launchMode, passthroughArgs, decision, prompt)
 
 export function listCodexProfiles() {
   return Object.values(profileCatalog);
+}
+
+/**
+ * @param {{
+ * gap_severity?: string,
+ * gap_count?: number
+ * }} input
+ */
+function buildGapSummary(input) {
+  const gapSeverity = `${input.gap_severity ?? "none"}`.toLowerCase();
+  const gapCount = Number.isFinite(input.gap_count) ? Number(input.gap_count) : 0;
+  return gapCount > 0 ? `${gapSeverity}:${gapCount}` : gapSeverity;
+}
+
+/**
+ * @param {{
+ * improvement_mode?: string,
+ * improvement_size?: string
+ * }} input
+ */
+function buildImprovementSummary(input) {
+  const improvementMode = `${input.improvement_mode ?? "none"}`.toLowerCase();
+  const improvementSize = `${input.improvement_size ?? "none"}`.toLowerCase();
+  return improvementMode === "none" ? "none" : `${improvementMode}:${improvementSize}`;
 }

@@ -32,6 +32,31 @@ Usa `backend/.env.example` como base:
 6. Correr backend:
    - `npm --prefix backend run dev`
 
+## Provisionar un admin real sin stub
+
+Si quieres entrar al frontend remoto con un tenant real local y una cuenta `admin` propia, puedes provisionarla sin crear roles nuevos:
+
+1. Levanta DB y aplica migraciones:
+   - `docker compose up -d postgres`
+   - `npm --prefix backend run prisma:deploy`
+2. Ejecuta el provisionamiento:
+   - `npm --prefix backend run provision:admin`
+
+Variables opcionales:
+
+- `OPITA_PROVISION_TENANT_SLUG`
+- `OPITA_PROVISION_TENANT_NAME`
+- `OPITA_PROVISION_ADMIN_NAME`
+- `OPITA_PROVISION_ADMIN_EMAIL`
+- `OPITA_PROVISION_ADMIN_PASSWORD`
+
+Defaults:
+
+- tenant: `tenant-local-real / Opita Local Real`
+- admin: `admin@local.opita.test / Admin1234!`
+
+El script deja cargados los registros minimos para que `Configuracion` funcione sobre backend real: parametros, capacidades, herramientas, usage, governance, retention y consentimiento.
+
 ## Credenciales demo (seed local)
 
 - `solicitante@acme.opita.test / Demo1234!`

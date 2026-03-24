@@ -147,12 +147,36 @@ async function main() {
       where: { key: "draft.tone" },
       update: { label: "Tono de borradores", editable: true },
       create: { key: "draft.tone", label: "Tono de borradores", editable: true }
+    }),
+    prisma.tenantParameter.upsert({
+      where: { key: "ai.provider" },
+      update: { label: "Proveedor IA", editable: true },
+      create: { key: "ai.provider", label: "Proveedor IA", editable: true }
+    }),
+    prisma.tenantParameter.upsert({
+      where: { key: "ai.base_url" },
+      update: { label: "Base URL API", editable: true },
+      create: { key: "ai.base_url", label: "Base URL API", editable: true }
+    }),
+    prisma.tenantParameter.upsert({
+      where: { key: "ai.api_key" },
+      update: { label: "API Key", editable: true },
+      create: { key: "ai.api_key", label: "API Key", editable: true }
+    }),
+    prisma.tenantParameter.upsert({
+      where: { key: "ai.model" },
+      update: { label: "Modelo por defecto", editable: true },
+      create: { key: "ai.model", label: "Modelo por defecto", editable: true }
     })
   ]);
   const paramValues = [
     { parameterId: params[0].id, value: "Media" },
     { parameterId: params[1].id, value: "Nuevo, En curso, Bloqueado, Resuelto" },
-    { parameterId: params[2].id, value: "Operativo formal" }
+    { parameterId: params[2].id, value: "Operativo formal" },
+    { parameterId: params[3].id, value: "openai" },
+    { parameterId: params[4].id, value: "https://api.openai.com/v1" },
+    { parameterId: params[5].id, value: "" },
+    { parameterId: params[6].id, value: "gpt-4.1-mini" }
   ];
   for (const p of paramValues) {
     await prisma.tenantParameterValue.upsert({
@@ -293,8 +317,8 @@ async function main() {
   });
   await prisma.navigationManifest.upsert({
     where: { tenantId_role: { tenantId: tenants[0].id, role: RoleKey.admin } },
-    update: { primaryViews: ["inicio", "casos", "configuracion"], backofficeViews: ["inicio", "configuracion"] },
-    create: { tenantId: tenants[0].id, role: RoleKey.admin, primaryViews: ["inicio", "casos", "configuracion"], backofficeViews: ["inicio", "configuracion"] }
+    update: { primaryViews: ["chat", "inicio", "casos", "detalle", "configuracion"], backofficeViews: ["chat", "configuracion"] },
+    create: { tenantId: tenants[0].id, role: RoleKey.admin, primaryViews: ["chat", "inicio", "casos", "detalle", "configuracion"], backofficeViews: ["chat", "configuracion"] }
   });
 
   await prisma.governanceAction.create({

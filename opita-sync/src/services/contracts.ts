@@ -15,6 +15,7 @@ import type {
   OperationalLogEntry,
   Role,
   SessionState,
+  AssistantConnectionStatus,
   TenantConfigData,
   ToolGovernanceItem,
   UsageAttribution,
@@ -41,11 +42,13 @@ export interface CaseService {
 
 export interface ChatService {
   getConversation(role: Role, caseId?: string): Promise<ConversationState>;
+  sendMessage(input: { role: Role; caseId?: string; message: string }): Promise<ConversationState>;
 }
 
 export interface TenantConfigService {
   getTenantConfig(): Promise<TenantConfigData>;
   updateParameter(input: { key: string; value: string }): Promise<{ updated: boolean; auditId: string }>;
+  testAssistantConnection(): Promise<AssistantConnectionStatus>;
 }
 
 export interface OperationalLogService {

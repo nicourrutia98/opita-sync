@@ -52,6 +52,16 @@ function withFallback(primary: OpitaAppServices, fallback: OpitaAppServices): Op
           }
           return await fallback.chatService.getConversation(role, caseId);
         }
+      },
+      async sendMessage(input) {
+        try {
+          return await primary.chatService.sendMessage(input);
+        } catch (error) {
+          if (isServiceError(error) && (error.status === 401 || error.status === 403)) {
+            throw error;
+          }
+          return await fallback.chatService.sendMessage(input);
+        }
       }
     },
     tenantConfigService: {
@@ -73,6 +83,16 @@ function withFallback(primary: OpitaAppServices, fallback: OpitaAppServices): Op
             throw error;
           }
           return await fallback.tenantConfigService.updateParameter(input);
+        }
+      },
+      async testAssistantConnection() {
+        try {
+          return await primary.tenantConfigService.testAssistantConnection();
+        } catch (error) {
+          if (isServiceError(error) && (error.status === 401 || error.status === 403)) {
+            throw error;
+          }
+          return await fallback.tenantConfigService.testAssistantConnection();
         }
       }
     },

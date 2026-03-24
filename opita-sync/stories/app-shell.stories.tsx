@@ -16,7 +16,6 @@ const meta = {
     availableViews: ["inicio", "chat", "casos", "detalle"],
     roles,
     userName: "Laura Rojas",
-    tenantName: "Acme Industrial",
     onSignOut: () => undefined,
     onRoleChange: () => undefined,
     onViewChange: () => undefined,
@@ -37,7 +36,6 @@ export const DarkSupervisor: Story = {
     role: "supervisor",
     theme: "dark",
     availableViews: ["inicio", "chat", "casos", "detalle"],
-    userName: "Diego Gil",
-    tenantName: "Acme Industrial"
+    userName: "Diego Gil"
   }
 };

@@ -120,6 +120,7 @@ export function createStubOpitaAppServices(options: StubAdapterOptions = {}): Op
   const mutableOperationalLogs = clone(operationalLogEntriesFixture);
   const mutableTools = clone(toolGovernanceFixture);
   const mutableDataReuseConsent = clone(dataReuseConsentFixture);
+  const mutableConversation = clone(conversationFixture);
   let logCounter = 1;
   if (seedRole && !readSession(storageKey)) {
     writeSession(storageKey, createSessionFixture(seedRole));
@@ -225,11 +226,49 @@ export function createStubOpitaAppServices(options: StubAdapterOptions = {}): Op
       async getConversation(role) {
         const session = await requireSession("chat");
         await maybeFail("chat", "No se pudo reconstruir la conversacion.");
-        const conversation = clone(conversationFixture);
+        const conversation = clone(mutableConversation);
         if (session.bootstrap.role === "supervisor" || role === "supervisor") {
           conversation.title = "Intencion operativa con contexto de supervisor";
         }
         return mapConversationDto(conversation);
+      },
+      async sendMessage(input) {
+        const session = await requireSession("chat");
+        await maybeFail("chat", "No se pudo enviar el mensaje.");
+        mutableConversation.messages.push(
+          {
+            id: `stub-user-${Date.now()}`,
+            tone: "user",
+            body: input.message
+          },
+          {
+            id: `stub-activity-thinking-${Date.now()}`,
+            tone: "system",
+            body: "[[activity:thinking]] Analizando el nuevo turno y preparando la siguiente accion."
+          },
+          {
+            id: `stub-activity-reasoning-${Date.now()}`,
+            tone: "system",
+            body: "[[activity:reasoning]] Organizando el contexto operativo y el historial visible."
+          },
+          {
+            id: `stub-activity-tool-${Date.now()}`,
+            tone: "system",
+            body: "[[activity:tool]] Consultando el proveedor configurado para responder desde el orquestador."
+          },
+          {
+            id: `stub-assistant-${Date.now()}`,
+            tone: "assistant",
+            body: `Respuesta de prueba para ${session.bootstrap.tenant.name}: ${input.message}`
+          },
+          {
+            id: `stub-activity-ready-${Date.now()}`,
+            tone: "system",
+            body: "[[activity:ready]] Respuesta lista desde el proveedor configurado."
+          }
+        );
+        mutableConversation.promptDraft = input.message;
+        return clone(mutableConversation);
       }
     },
     tenantConfigService: {
@@ -261,6 +300,18 @@ export function createStubOpitaAppServices(options: StubAdapterOptions = {}): Op
         }
         parameter.value = input.value;
         return { updated: true, auditId: `AUD-R2-CONF-${Date.now()}` };
+      },
+      async testAssistantConnection() {
+        const session = await requireSession("tenantUpdate");
+        if (session.bootstrap.role !== "admin") {
+          throw new ServiceError("Tu rol no puede actualizar configuracion.", "access_denied", 403);
+        }
+        return {
+          ok: true,
+          provider: "stub",
+          model: "stub-orchestrator",
+          detail: "Conexion simulada disponible para pruebas locales."
+        };
       }
     },
     operationalLogService: {

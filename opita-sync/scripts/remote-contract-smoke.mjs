@@ -159,6 +159,24 @@ async function main() {
     });
   });
 
+  await runCheck(checks, "AI tenant-config.test-ai", async () => {
+    await request(baseUrl, "tenant-config/test-ai", {
+      method: "POST",
+      token: adminToken
+    });
+  });
+
+  await runCheck(checks, "AI chat.message", async () => {
+    await request(baseUrl, "chat/message", {
+      method: "POST",
+      token: adminToken,
+      body: {
+        caseId: process.env.OPITA_SMOKE_CASE_ID ?? "CAS-2048",
+        message: "Prueba de integracion del orquestador con historial y estados visibles."
+      }
+    });
+  });
+
   const failures = checks.filter((item) => item.status === "fail");
   for (const check of checks) {
     const suffix = check.detail ? ` -> ${check.detail}` : "";

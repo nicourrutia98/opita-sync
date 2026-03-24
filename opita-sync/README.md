@@ -43,6 +43,8 @@ Las variables `FAIL` y `AUTH_FAIL` sirven para smoke y QA del adapter sin tocar 
 - `npm run codex:pick`
 - `npm run codex:exec:auto`
 - `npm run codex:chat:auto`
+- `npm run skill:package`
+- `npm run skill:package:implementacion-optima`
 - `npm run router:benchmark`
 - `npm run router:report`
 - `npm run router:calibrate`
@@ -81,6 +83,16 @@ Este proyecto conserva comandos de routing heredados del workspace original, per
 
 Limitacion importante: este router no cambia el modelo del chat actual en caliente.
 
+Tambien acepta senales de preparacion de implementacion:
+
+- `--implementation-kind small_patch|feature|refactor|architecture|audit|migration|frontend_ui|backend_api`
+- `--gap-severity none|minor|important|critical`
+- `--gap-count <n>`
+- `--improvement-mode none|suggested|applied_safe_improvement`
+- `--improvement-size none|small|medium`
+
+Estas senales estan pensadas para la skill `implementacion-optima`, que prepara la proxima implementacion con gaps resueltos y una mejora segura aplicada cuando sea conveniente.
+
 ## Ejecucion local
 
 1. Instala dependencias con `npm install`.
@@ -92,6 +104,32 @@ Limitacion importante: este router no cambia el modelo del chat actual en calien
    - `npm run db:migrate`
    - `npm run db:seed`
    - `npm run backend:dev`
+
+## Admin real sin stub
+
+Para probar las funcionalidades implementadas con backend real y sin fallback a `stub`:
+
+1. Asegura `.env` con:
+   - `VITE_OPITA_DATA_SOURCE=remote`
+   - `VITE_OPITA_API_BASE_URL=http://localhost:4000`
+   - `VITE_OPITA_ENABLE_STUB_FALLBACK=false`
+2. Levanta DB y backend:
+   - `npm run db:up`
+   - `npm run db:migrate`
+   - `npm run backend:provision:admin`
+   - `npm run backend:dev`
+3. Inicia frontend:
+   - `npm run dev`
+
+Default local admin:
+
+- `admin@local.opita.test`
+- `Admin1234!`
+
+Tenant local real:
+
+- slug: `tenant-local-real`
+- name: `Opita Local Real`
 
 ## Estrategia de servicios
 

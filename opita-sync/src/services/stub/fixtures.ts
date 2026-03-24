@@ -367,8 +367,8 @@ export const navigationManifestFixtures: Record<NavigationManifestDto["role"], N
   },
   admin: {
     role: "admin",
-    primaryViews: ["inicio", "casos", "configuracion"],
-    backofficeViews: ["inicio", "configuracion"]
+    primaryViews: ["chat", "inicio", "casos", "detalle", "configuracion"],
+    backofficeViews: ["chat", "configuracion"]
   }
 };
 
@@ -397,7 +397,7 @@ export const accessBootstrapFixtures: Record<AccessBootstrap["role"], AccessBoot
     user: { id: "usr-adm-01", fullName: "Paula Mejia", email: "admin@acme.opita.test" },
     tenant: { id: "tenant-acme", name: "Acme Industrial" },
     role: "admin",
-    allowedViews: ["inicio", "casos", "configuracion"]
+    allowedViews: ["chat", "inicio", "casos", "detalle", "configuracion"]
   }
 };
 

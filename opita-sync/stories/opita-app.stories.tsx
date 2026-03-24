@@ -20,11 +20,27 @@ export const Default: Story = {
   }
 };
 
-export const SupervisorDark: Story = {
+export const MinimalHomeTecnico: Story = {
+  args: {
+    services: createStubOpitaAppServices({ seedSession: "tecnico" }),
+    initialView: "inicio",
+    initialTheme: "light"
+  }
+};
+
+export const MinimalHomeSupervisor: Story = {
   args: {
     services: createStubOpitaAppServices({ seedSession: "supervisor" }),
     initialView: "inicio",
     initialTheme: "dark"
+  }
+};
+
+export const CasesQueueMinimal: Story = {
+  args: {
+    services: createStubOpitaAppServices({ seedSession: "tecnico" }),
+    initialView: "casos",
+    initialTheme: "light"
   }
 };
 
@@ -50,7 +66,7 @@ export const AccessDeniedOnConfig: Story = {
   }
 };
 
-export const Release2DetailGovernedLog: Story = {
+export const CaseDetailWithCollapsedTraceability: Story = {
   args: {
     services: createStubOpitaAppServices({ seedSession: "tecnico" }),
     initialView: "detalle",
@@ -58,7 +74,7 @@ export const Release2DetailGovernedLog: Story = {
   }
 };
 
-export const Release2ConfigGovernance: Story = {
+export const ConfigGovernanceMinimal: Story = {
   args: {
     services: createStubOpitaAppServices({ seedSession: "admin" }),
     initialView: "configuracion",
@@ -66,7 +82,7 @@ export const Release2ConfigGovernance: Story = {
   }
 };
 
-export const Release3ChatDrafting: Story = {
+export const ChatWithPrimaryActionFocus: Story = {
   args: {
     services: createStubOpitaAppServices({ seedSession: "tecnico" }),
     initialView: "chat",
@@ -74,7 +90,7 @@ export const Release3ChatDrafting: Story = {
   }
 };
 
-export const Release3ValueAndUsage: Story = {
+export const AdminControlWithSecondaryBilling: Story = {
   args: {
     services: createStubOpitaAppServices({ seedSession: "admin" }),
     initialView: "configuracion",
@@ -82,7 +98,7 @@ export const Release3ValueAndUsage: Story = {
   }
 };
 
-export const Release4GovernanceAndCompliance: Story = {
+export const GovernanceAndComplianceDark: Story = {
   args: {
     services: createStubOpitaAppServices({ seedSession: "admin" }),
     initialView: "configuracion",

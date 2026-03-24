@@ -5,7 +5,7 @@ import { makeRequestId, slugify } from "../../scripts/lib/request-registry.mjs";
 
 test("toAbsolute resolves repo-relative paths", () => {
   const value = toAbsolute("README.md");
-  assert.match(value, /Projecto Auto[\\/]+opita-sync[\\/]+README\.md$/);
+  assert.match(value, /opita-sync[\\/]+README\.md$/);
 });
 
 test("exists detects known release files", () => {

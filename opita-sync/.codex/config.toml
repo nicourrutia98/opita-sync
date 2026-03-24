@@ -21,3 +21,7 @@ url = "https://developers.openai.com/mcp"
 [mcp_servers.playwright]
 command = "npx"
 args = ["@playwright/mcp@latest"]
+
+[mcp_servers.spec_hub]
+command = "npm"
+args = ["--prefix", "mcp/spec-hub", "run", "start"]

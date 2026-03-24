@@ -28,6 +28,18 @@ export interface ConversationDto {
   messages: Array<{ id: string; tone: "user" | "assistant" | "system"; body: string }>;
 }
 
+export interface SendChatMessageDto {
+  caseId?: string;
+  message: string;
+}
+
+export interface AssistantConnectionStatusDto {
+  ok: boolean;
+  provider: string;
+  model: string;
+  detail: string;
+}
+
 export interface TenantConfigDto {
   activeCapabilities: string;
   limits: string;

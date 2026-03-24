@@ -1,0 +1,20 @@
+{
+  "projectId": "opita-sync",
+  "projectName": "Opita Sync",
+  "version": 1,
+  "stablePrefix": [
+    "skills/traductor-tecnico/SKILL.md",
+    "skills/traductor-tecnico/references/output-contract.md",
+    "context-core/CONTEXT-POLICY.md",
+    "mcp/spec-hub/TOOLS.md"
+  ],
+  "artifactKinds": [
+    "normalized_requirement",
+    "architecture_decision",
+    "spec_snapshot",
+    "traceability_report",
+    "fidelity_report",
+    "session_state",
+    "repo_grounding"
+  ]
+}

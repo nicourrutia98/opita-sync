@@ -13,6 +13,11 @@ Options:
   --risk <level>          low|medium|high
   --needs-tools           Increase score for tool-heavy tasks
   --file-count <n>        Hint for affected file count
+  --implementation-kind <type>  small_patch|feature|refactor|architecture|audit|migration|frontend_ui|backend_api
+  --gap-severity <level>  none|minor|important|critical
+  --gap-count <n>         Number of currently open or recently closed gaps
+  --improvement-mode <mode>  none|suggested|applied_safe_improvement
+  --improvement-size <size>  none|small|medium
   --force-profile <name>  codex_fast|codex_balanced|codex_deep
   --exec                  Launch codex exec through the selected profile
   --chat                  Launch a new interactive Codex session through the selected profile
@@ -42,6 +47,11 @@ function parseArgs(argv) {
     risk_level: "low",
     needs_tools: false,
     file_count: 0,
+    implementation_kind: "feature",
+    gap_severity: "none",
+    gap_count: 0,
+    improvement_mode: "none",
+    improvement_size: "none",
     passthrough: []
   };
 
@@ -95,7 +105,20 @@ function parseArgs(argv) {
       continue;
     }
 
-    if (["--prompt", "--task-type", "--risk", "--file-count", "--force-profile"].includes(arg)) {
+    if (
+      [
+        "--prompt",
+        "--task-type",
+        "--risk",
+        "--file-count",
+        "--force-profile",
+        "--implementation-kind",
+        "--gap-severity",
+        "--gap-count",
+        "--improvement-mode",
+        "--improvement-size"
+      ].includes(arg)
+    ) {
       const next = argv[index + 1];
       if (!next) {
         fail(`Missing value for ${arg}`);
@@ -119,6 +142,26 @@ function parseArgs(argv) {
 
       if (arg === "--force-profile") {
         options.force_profile = next;
+      }
+
+      if (arg === "--implementation-kind") {
+        options.implementation_kind = next;
+      }
+
+      if (arg === "--gap-severity") {
+        options.gap_severity = next;
+      }
+
+      if (arg === "--gap-count") {
+        options.gap_count = Number.parseInt(next, 10);
+      }
+
+      if (arg === "--improvement-mode") {
+        options.improvement_mode = next;
+      }
+
+      if (arg === "--improvement-size") {
+        options.improvement_size = next;
       }
 
       index += 1;
@@ -165,6 +208,11 @@ const decision = routeCodexLaunch({
   risk_level: /** @type {string} */ (options.risk_level),
   needs_tools: Boolean(options.needs_tools),
   file_count: /** @type {number} */ (options.file_count),
+  implementation_kind: /** @type {string} */ (options.implementation_kind),
+  gap_severity: /** @type {string} */ (options.gap_severity),
+  gap_count: /** @type {number} */ (options.gap_count),
+  improvement_mode: /** @type {string} */ (options.improvement_mode),
+  improvement_size: /** @type {string} */ (options.improvement_size),
   force_profile: /** @type {string | undefined} */ (options.force_profile)
 });
 
@@ -175,6 +223,17 @@ const output = {
   prompt: options.prompt,
   mode: mode ?? "recommendation",
   decision,
+  routing_context: {
+    task_type: options.task_type,
+    risk_level: options.risk_level,
+    needs_tools: options.needs_tools,
+    file_count: options.file_count,
+    implementation_kind: options.implementation_kind,
+    gap_severity: options.gap_severity,
+    gap_count: options.gap_count,
+    improvement_mode: options.improvement_mode,
+    improvement_size: options.improvement_size
+  },
   command_preview: command?.join(" ") ?? null
 };
 
@@ -187,6 +246,9 @@ if (!mode || options.dry_run) {
     console.log(`Reasoning: ${decision.reasoning_effort}`);
     console.log(`Score: ${decision.score}`);
     console.log(`Rationale: ${decision.rationale_codes.join(", ")}`);
+    console.log(`Implementation kind: ${decision.implementation_kind}`);
+    console.log(`Gap summary: ${decision.gap_summary}`);
+    console.log(`Improvement summary: ${decision.improvement_summary}`);
     if (command) {
       console.log(`Command: ${command.join(" ")}`);
     }

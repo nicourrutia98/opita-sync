@@ -1,0 +1,10 @@
+{
+  "task_type": "coding",
+  "risk_level": "medium",
+  "implementation_kind": "feature",
+  "gap_severity": "important",
+  "gap_count": 2,
+  "improvement_mode": "applied_safe_improvement",
+  "improvement_size": "small",
+  "recommended_command": "npm run codex:exec:auto -- --dry-run --task-type coding --risk medium --implementation-kind feature --gap-severity important --gap-count 2 --improvement-mode applied_safe_improvement --improvement-size small --prompt \"Implement the next scoped feature with the documented safe improvement applied.\""
+}

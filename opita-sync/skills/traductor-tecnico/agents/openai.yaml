@@ -1,0 +1,3 @@
+name: Traductor Tecnico
+description: Skill editorial para convertir briefs ambiguos en especificaciones técnicas trazables y verificar fidelidad documental antes de implementación.
+instructions_file: ../SKILL.md

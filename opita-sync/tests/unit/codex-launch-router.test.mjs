@@ -27,6 +27,42 @@ test("routes security-heavy request to deep profile", () => {
   assert.ok(decision.score >= 8);
 });
 
+test("routes implementation with important gaps and safe improvement to deep profile", () => {
+  const decision = routeCodexLaunch({
+    prompt: "Implement the next migration with explicit rollback notes and acceptance coverage.",
+    task_type: "migration",
+    risk_level: "medium",
+    needs_tools: true,
+    file_count: 8,
+    implementation_kind: "migration",
+    gap_severity: "important",
+    gap_count: 3,
+    improvement_mode: "applied_safe_improvement",
+    improvement_size: "small"
+  });
+
+  assert.equal(decision.selected_profile, "codex_deep");
+  assert.equal(decision.implementation_kind, "migration");
+  assert.equal(decision.gap_summary, "important:3");
+  assert.equal(decision.improvement_summary, "applied_safe_improvement:small");
+});
+
+test("keeps small patch with one safe improvement in balanced or fast territory", () => {
+  const decision = routeCodexLaunch({
+    prompt: "Small UI patch plus explicit empty state copy.",
+    task_type: "coding",
+    risk_level: "low",
+    file_count: 2,
+    implementation_kind: "small_patch",
+    gap_severity: "minor",
+    gap_count: 1,
+    improvement_mode: "applied_safe_improvement",
+    improvement_size: "small"
+  });
+
+  assert.notEqual(decision.selected_profile, "codex_deep");
+});
+
 test("builds codex exec command with selected profile", () => {
   const decision = routeCodexLaunch({
     prompt: "Fix the failing test.",

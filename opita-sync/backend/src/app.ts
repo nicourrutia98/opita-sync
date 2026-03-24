@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { PrismaClient, RoleKey, MessageTone, CaseStatus, PolicyMode, GovernanceActionStatus } from "@prisma/client";
 import { z } from "zod";
+import { AssistantProviderError, runAssistantTurn, testTenantAssistantConnection } from "./assistant-provider.js";
 
 const prisma = new PrismaClient();
 
@@ -24,7 +25,7 @@ const roleViewMap: Record<RoleKey, Array<"inicio" | "chat" | "casos" | "detalle"
   solicitante: ["inicio", "chat", "casos", "detalle"],
   tecnico: ["inicio", "chat", "casos", "detalle"],
   supervisor: ["inicio", "chat", "casos", "detalle"],
-  admin: ["inicio", "casos", "configuracion"]
+  admin: ["chat", "inicio", "casos", "detalle", "configuracion"]
 };
 
 function toCaseStatusLabel(status: CaseStatus): "Nuevo" | "En curso" | "Bloqueado" | "Resuelto" {
@@ -44,6 +45,9 @@ function toStatusEnum(input: string): CaseStatus {
 function mapError(reply: FastifyReply, error: unknown) {
   if (error instanceof z.ZodError) {
     return reply.status(422).send({ code: "validation_error", issues: error.issues });
+  }
+  if (error instanceof AssistantProviderError) {
+    return reply.status(error.statusCode).send({ code: "assistant_error", message: error.message });
   }
   const requestId = crypto.randomUUID();
   return reply.status(500).send({ code: "internal_error", request_id: requestId });
@@ -79,6 +83,14 @@ async function audit(tenantId: string, actorUserId: string | null, module: strin
       details: details as object
     }
   });
+}
+
+function serializeConversationMessage(message: { id: string; tone: MessageTone; body: string }) {
+  return {
+    id: message.id,
+    tone: message.tone as "user" | "assistant" | "system",
+    body: message.body
+  };
 }
 
 export async function buildApp(): Promise<FastifyInstance> {
@@ -176,22 +188,70 @@ export async function buildApp(): Promise<FastifyInstance> {
     const tenantId = request.auth!.tenantId;
     const activeCount = await prisma.case.count({ where: { tenantId, status: { in: [CaseStatus.Nuevo, CaseStatus.En_curso, CaseStatus.Bloqueado] } } });
     const blockedCount = await prisma.case.count({ where: { tenantId, status: CaseStatus.Bloqueado } });
+    const successfulActions = await prisma.usageEvent.count({ where: { tenantId, successful: true } });
+    const pendingDrafts = await prisma.draft.count({ where: { tenantId, status: "pending_approval" } });
+    const certifiedTools = await prisma.tool.count({ where: { certification: "certified", deletedAt: null } });
+    const latestLog = await prisma.operationalLogEntry.findFirst({
+      where: { tenantId },
+      include: { case: true },
+      orderBy: { createdAt: "desc" }
+    });
+    const blockedCases = await prisma.case.findMany({
+      where: { tenantId, status: CaseStatus.Bloqueado },
+      orderBy: { updatedAt: "desc" },
+      take: 3
+    });
+    const pendingApprovalDraft = await prisma.draft.findFirst({
+      where: { tenantId, status: "pending_approval" },
+      include: { case: true },
+      orderBy: { createdAt: "desc" }
+    });
     return {
       metrics: [
-        { label: "Casos activos", value: String(activeCount), helper: "Tiempo real" },
-        { label: "Bloqueados", value: String(blockedCount), helper: "Con riesgo SLA" },
-        { label: "Acciones positivas", value: "0", helper: "Pendiente snapshot" },
-        { label: "Trail auditado", value: "100%", helper: "Eventos con actor" }
+        { label: "Casos activos", value: String(activeCount), helper: "Casos abiertos en el tenant" },
+        ...(blockedCount > 0 ? [{ label: "Bloqueados", value: String(blockedCount), helper: "Requieren destrabe operativo" }] : []),
+        ...(successfulActions > 0 ? [{ label: "Acciones exitosas", value: String(successfulActions), helper: "Registradas en usage" }] : []),
+        ...(pendingDrafts > 0 ? [{ label: "Aprobaciones pendientes", value: String(pendingDrafts), helper: "Borradores en espera" }] : []),
+        ...(certifiedTools > 0 ? [{ label: "Herramientas certificadas", value: String(certifiedTools), helper: "Disponibles para operar" }] : [])
       ],
-      inbox: ["Bandeja operativa cargada desde backend real."],
+      inbox: [
+        ...(latestLog ? [`Ultimo movimiento: ${latestLog.type} en ${latestLog.case.code}.`] : []),
+        ...blockedCases.slice(0, 2).map((item) => `${item.code} sigue bloqueado en ${item.site}.`),
+        ...(pendingApprovalDraft ? [`${pendingApprovalDraft.case.code} tiene un borrador pendiente de aprobacion.`] : [])
+      ],
       supervisorMetrics: [
-        { label: "Aprobaciones pendientes", value: "0", helper: "Sin pendientes" },
-        { label: "Casos bloqueados", value: String(blockedCount), helper: "Control supervisión" },
-        { label: "Escalamientos", value: "0", helper: "Últimas 24h" },
-        { label: "Auditoría completa", value: "100%", helper: "Sin gaps" }
+        ...(pendingDrafts > 0 ? [{ label: "Aprobaciones pendientes", value: String(pendingDrafts), helper: "Borradores por revisar" }] : []),
+        ...(blockedCount > 0 ? [{ label: "Casos bloqueados", value: String(blockedCount), helper: "Seguimiento supervisor" }] : []),
+        ...(successfulActions > 0 ? [{ label: "Acciones exitosas", value: String(successfulActions), helper: "Con evidencia registrada" }] : []),
+        ...(certifiedTools > 0 ? [{ label: "Herramientas certificadas", value: String(certifiedTools), helper: "Disponibles en el tenant" }] : [])
       ],
-      supervisorQueue: role === RoleKey.supervisor ? [{ title: "Revisar bloqueos", detail: "Hay casos bloqueados en la cola.", tone: "warning" }] : [],
-      supervisorSignals: role === RoleKey.supervisor ? ["Visibilidad supervisor activa por tenant."] : []
+      supervisorQueue:
+        role === RoleKey.supervisor
+          ? [
+              ...blockedCases.map((item) => ({
+                title: `Destrabar ${item.code}`,
+                detail: `${item.title} continua bloqueado en ${item.site}.`,
+                tone: "warning" as const
+              })),
+              ...(pendingApprovalDraft
+                ? [
+                    {
+                      title: `Revisar borrador de ${pendingApprovalDraft.case.code}`,
+                      detail: "Hay una aprobacion pendiente antes de continuar la operacion.",
+                      tone: "brand" as const
+                    }
+                  ]
+                : [])
+            ]
+          : [],
+      supervisorSignals:
+        role === RoleKey.supervisor
+          ? [
+              ...(blockedCount > 0 ? [`${blockedCount} caso(s) bloqueado(s) requieren seguimiento.`] : []),
+              ...(pendingDrafts > 0 ? [`${pendingDrafts} borrador(es) esperan aprobacion.`] : []),
+              ...(latestLog ? [`Ultima evidencia registrada a las ${latestLog.createdAt.toISOString()}.`] : [])
+            ]
+          : []
     };
   });
 
@@ -244,18 +304,140 @@ export async function buildApp(): Promise<FastifyInstance> {
   app.get("/chat/conversation", { preHandler: [requireAuth] }, async (request) => {
     const query = request.query as { caseId?: string };
     const base = await prisma.conversation.findFirst({
-      where: { tenantId: request.auth!.tenantId, ...(query.caseId ? { case: { code: query.caseId } } : {}) },
+      where: {
+        tenantId: request.auth!.tenantId,
+        userId: request.auth!.userId,
+        ...(query.caseId ? { case: { code: query.caseId } } : { caseId: null })
+      },
       include: { messages: { orderBy: { createdAt: "asc" } } }
     });
     return {
-      title: base?.title ?? "Conversación operativa",
-      promptDraft: base?.promptDraft ?? "Solicita la acción requerida por el caso.",
-      messages: (base?.messages ?? []).map((m) => ({
-        id: m.id,
-        tone: m.tone as "user" | "assistant" | "system",
-        body: m.body
-      }))
+      title: base?.title ?? "Conversacion operativa",
+      promptDraft: base?.promptDraft ?? "Solicita la accion requerida por el caso.",
+      messages: (base?.messages ?? []).map(serializeConversationMessage)
     };
+  });
+
+  app.post("/chat/message", { preHandler: [requireAuth] }, async (request, reply) => {
+    try {
+      const body = z.object({ caseId: z.string().optional(), message: z.string().min(1) }).parse(request.body);
+      const tenantId = request.auth!.tenantId;
+      const userId = request.auth!.userId;
+      const caseRow = body.caseId ? await prisma.case.findFirst({ where: { tenantId, code: body.caseId } }) : null;
+
+      if (body.caseId && !caseRow) {
+        return reply.status(404).send({ code: "not_found" });
+      }
+
+      const conversation =
+        (await prisma.conversation.findFirst({
+          where: {
+            tenantId,
+            userId,
+            ...(caseRow ? { caseId: caseRow.id } : { caseId: null })
+          },
+          include: { messages: { orderBy: { createdAt: "asc" } } }
+        })) ??
+        (await prisma.conversation.create({
+          data: {
+            tenantId,
+            userId,
+            caseId: caseRow?.id,
+            title: caseRow ? `Conversacion ${caseRow.code}` : "Conversacion operativa",
+            promptDraft: caseRow ? `Ayudame a continuar con ${caseRow.code}.` : "Solicita la accion requerida por el caso."
+          },
+          include: { messages: { orderBy: { createdAt: "asc" } } }
+        }));
+
+      const userMessage = await prisma.conversationMessage.create({
+        data: {
+          tenantId,
+          conversationId: conversation.id,
+          authorId: userId,
+          tone: MessageTone.user,
+          body: body.message
+        }
+      });
+
+      const activityBodies = [
+        "[[activity:thinking]] Analizando el nuevo turno y preparando la siguiente accion.",
+        "[[activity:reasoning]] Organizando el contexto operativo y el historial visible.",
+        "[[activity:tool]] Consultando el proveedor configurado para responder desde el orquestador."
+      ];
+
+      for (const activityBody of activityBodies) {
+        await prisma.conversationMessage.create({
+          data: {
+            tenantId,
+            conversationId: conversation.id,
+            authorId: userId,
+            tone: MessageTone.system,
+            body: activityBody
+          }
+        });
+      }
+
+      const assistantResult = await runAssistantTurn(prisma, {
+        tenantId,
+        prompt: body.message,
+        caseRow,
+        history: [...conversation.messages.map((item) => ({ tone: item.tone, body: item.body })), { tone: MessageTone.user, body: body.message }]
+      });
+
+      await prisma.conversationMessage.create({
+        data: {
+          tenantId,
+          conversationId: conversation.id,
+          authorId: userId,
+          tone: MessageTone.assistant,
+          body: assistantResult.text
+        }
+      });
+
+      await prisma.conversationMessage.create({
+        data: {
+          tenantId,
+          conversationId: conversation.id,
+          authorId: userId,
+          tone: MessageTone.system,
+          body: `[[activity:ready]] Respuesta lista desde ${assistantResult.provider} con ${assistantResult.model}.`
+        }
+      });
+
+      await prisma.conversation.update({
+        where: { id: conversation.id },
+        data: { promptDraft: body.message }
+      });
+
+      await prisma.usageEvent.create({
+        data: {
+          tenantId,
+          caseId: caseRow?.id,
+          successful: true,
+          estimatedTokens: assistantResult.estimatedTokens || 0
+        }
+      });
+
+      await audit(tenantId, userId, "chat", "message", "success", { caseId: body.caseId ?? null, provider: assistantResult.provider, model: assistantResult.model }, "conversation", conversation.id);
+
+      const refreshed = await prisma.conversation.findUniqueOrThrow({
+        where: { id: conversation.id },
+        include: { messages: { orderBy: { createdAt: "asc" } } }
+      });
+
+      return {
+        title: refreshed.title,
+        promptDraft: refreshed.promptDraft,
+        messages: refreshed.messages.map(serializeConversationMessage),
+        meta: {
+          provider: assistantResult.provider,
+          model: assistantResult.model,
+          lastUserMessageId: userMessage.id
+        }
+      };
+    } catch (error) {
+      return mapError(reply, error);
+    }
   });
 
   app.get("/tenant-config", { preHandler: [requireAuth, requireRole([RoleKey.admin])] }, async (request) => {
@@ -284,6 +466,14 @@ export async function buildApp(): Promise<FastifyInstance> {
       const auditId = crypto.randomUUID();
       await audit(request.auth!.tenantId, request.auth!.userId, "tenant_config", "update_parameter", "success", body, "tenant_parameter", param.id);
       return { updated: true, auditId };
+    } catch (error) {
+      return mapError(reply, error);
+    }
+  });
+
+  app.post("/tenant-config/test-ai", { preHandler: [requireAuth, requireRole([RoleKey.admin])] }, async (request, reply) => {
+    try {
+      return await testTenantAssistantConnection(prisma, request.auth!.tenantId);
     } catch (error) {
       return mapError(reply, error);
     }
@@ -563,7 +753,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     return {
       role,
       primaryViews: (manifest?.primaryViews as string[] | null) ?? roleViewMap[role],
-      backofficeViews: (manifest?.backofficeViews as string[] | null) ?? (role === RoleKey.admin ? ["inicio", "configuracion"] : [])
+      backofficeViews: (manifest?.backofficeViews as string[] | null) ?? (role === RoleKey.admin ? ["chat", "configuracion"] : [])
     };
   });
 
