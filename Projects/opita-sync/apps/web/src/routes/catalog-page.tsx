@@ -8,6 +8,7 @@ import { ArrowRight, BookOpenText, Filter, Search } from 'lucide-react';
 import { AppShellLayout } from '../../../../packages/ui-opita/src/shell.js';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, MetricCard, StateBlock } from '../../../../packages/ui-core/src/primitives.js';
 import { DenseTable } from '../../../../packages/ui-core/src/table.js';
+import { NavChip } from '../components.js';
 import { fetchCatalog } from '../lib/api.js';
 import { queryKeys } from '../lib/query-keys.js';
 import type { CatalogItemSummary } from '../lib/types.js';
@@ -65,25 +66,21 @@ export function CatalogPage() {
       columnHelper.accessor('kind', { header: 'Kind', cell: (info) => <Badge tone="muted">{info.getValue()}</Badge> }),
       columnHelper.accessor('lifecycleState', { header: 'Lifecycle', cell: (info) => <Badge tone={info.getValue() === 'published' ? 'success' : 'warning'}>{info.getValue()}</Badge> }),
       columnHelper.accessor('approvalMode', { header: 'Approval', cell: (info) => <Badge tone="brand">{info.getValue()}</Badge> }),
-      columnHelper.display({
-        id: 'actions',
-        header: 'Open',
-        cell: (info) => (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              router.push(`/operate?assetId=${encodeURIComponent(info.row.original.assetId)}`);
-            }}
-          >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <ArrowRight size={16} />
-              Operate
-            </span>
-          </Button>
-        )
-      })
-    ],
+              columnHelper.display({
+                id: 'actions',
+                header: 'Open',
+                cell: (info) => (
+                  <NavChip
+                    href={`/operate?assetId=${encodeURIComponent(info.row.original.assetId)}`}
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <ArrowRight size={16} />
+                      Operate
+                    </span>
+                  </NavChip>
+                )
+              })
+            ],
     getCoreRowModel: getCoreRowModel()
   });
 
@@ -145,7 +142,7 @@ export function CatalogPage() {
                   <Search size={16} style={{ position: 'absolute', left: 14, top: 14, color: 'var(--muted)' }} />
                   <Input value={search} onChange={(event) => setSearch(event.currentTarget.value)} placeholder="Search assets, tags, connectors, approval mode..." style={{ paddingLeft: 40 }} />
                 </div>
-                <Button variant="secondary" onClick={() => setFiltersOpen((current) => !current)}>
+                <Button type="button" variant="secondary" onClick={() => setFiltersOpen((current) => !current)}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                     <Filter size={16} />
                     {filtersOpen ? 'Hide filters' : 'Filters'}
@@ -156,22 +153,22 @@ export function CatalogPage() {
               {filtersOpen && (
                 <div style={{ display: 'grid', gap: 12, padding: 14, border: '1px solid var(--line)', borderRadius: 18, background: 'var(--surface)' }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    <Button size="sm" variant={kindFilter === 'all' ? 'primary' : 'secondary'} onClick={() => setKindFilter('all')}>All kinds</Button>
-                    <Button size="sm" variant={kindFilter === 'action' ? 'primary' : 'secondary'} onClick={() => setKindFilter('action')}>Actions</Button>
-                    <Button size="sm" variant={kindFilter === 'workflow' ? 'primary' : 'secondary'} onClick={() => setKindFilter('workflow')}>Workflows</Button>
+                    <Button type="button" size="sm" variant={kindFilter === 'all' ? 'primary' : 'secondary'} onClick={() => setKindFilter('all')}>All kinds</Button>
+                    <Button type="button" size="sm" variant={kindFilter === 'action' ? 'primary' : 'secondary'} onClick={() => setKindFilter('action')}>Actions</Button>
+                    <Button type="button" size="sm" variant={kindFilter === 'workflow' ? 'primary' : 'secondary'} onClick={() => setKindFilter('workflow')}>Workflows</Button>
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    <Button size="sm" variant={lifecycleFilter === 'all' ? 'primary' : 'secondary'} onClick={() => setLifecycleFilter('all')}>Any lifecycle</Button>
-                    <Button size="sm" variant={lifecycleFilter === 'published' ? 'primary' : 'secondary'} onClick={() => setLifecycleFilter('published')}>Published</Button>
-                    <Button size="sm" variant={lifecycleFilter === 'draft' ? 'primary' : 'secondary'} onClick={() => setLifecycleFilter('draft')}>Draft</Button>
-                    <Button size="sm" variant={lifecycleFilter === 'retired' ? 'primary' : 'secondary'} onClick={() => setLifecycleFilter('retired')}>Retired</Button>
+                    <Button type="button" size="sm" variant={lifecycleFilter === 'all' ? 'primary' : 'secondary'} onClick={() => setLifecycleFilter('all')}>Any lifecycle</Button>
+                    <Button type="button" size="sm" variant={lifecycleFilter === 'published' ? 'primary' : 'secondary'} onClick={() => setLifecycleFilter('published')}>Published</Button>
+                    <Button type="button" size="sm" variant={lifecycleFilter === 'draft' ? 'primary' : 'secondary'} onClick={() => setLifecycleFilter('draft')}>Draft</Button>
+                    <Button type="button" size="sm" variant={lifecycleFilter === 'retired' ? 'primary' : 'secondary'} onClick={() => setLifecycleFilter('retired')}>Retired</Button>
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    <Button size="sm" variant={approvalFilter === 'all' ? 'primary' : 'secondary'} onClick={() => setApprovalFilter('all')}>Any approval</Button>
-                    <Button size="sm" variant={approvalFilter === 'auto' ? 'primary' : 'secondary'} onClick={() => setApprovalFilter('auto')}>Auto</Button>
-                    <Button size="sm" variant={approvalFilter === 'pre-execution' ? 'primary' : 'secondary'} onClick={() => setApprovalFilter('pre-execution')}>Pre-execution</Button>
-                    <Button size="sm" variant={approvalFilter === 'pre-application' ? 'primary' : 'secondary'} onClick={() => setApprovalFilter('pre-application')}>Pre-application</Button>
-                    <Button size="sm" variant={approvalFilter === 'double_approval' ? 'primary' : 'secondary'} onClick={() => setApprovalFilter('double_approval')}>Double approval</Button>
+                    <Button type="button" size="sm" variant={approvalFilter === 'all' ? 'primary' : 'secondary'} onClick={() => setApprovalFilter('all')}>Any approval</Button>
+                    <Button type="button" size="sm" variant={approvalFilter === 'auto' ? 'primary' : 'secondary'} onClick={() => setApprovalFilter('auto')}>Auto</Button>
+                    <Button type="button" size="sm" variant={approvalFilter === 'pre-execution' ? 'primary' : 'secondary'} onClick={() => setApprovalFilter('pre-execution')}>Pre-execution</Button>
+                    <Button type="button" size="sm" variant={approvalFilter === 'pre-application' ? 'primary' : 'secondary'} onClick={() => setApprovalFilter('pre-application')}>Pre-application</Button>
+                    <Button type="button" size="sm" variant={approvalFilter === 'double_approval' ? 'primary' : 'secondary'} onClick={() => setApprovalFilter('double_approval')}>Double approval</Button>
                   </div>
                 </div>
               )}

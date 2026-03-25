@@ -8,6 +8,7 @@ import { Clock3, FileClock, History, ShieldAlert } from 'lucide-react';
 import { AppShellLayout } from '../../../../packages/ui-opita/src/shell.js';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, MetricCard, StateBlock } from '../../../../packages/ui-core/src/primitives.js';
 import { DenseTable } from '../../../../packages/ui-core/src/table.js';
+import { NavChip } from '../components.js';
 import { fetchActivity, fetchRun } from '../lib/api.js';
 import { queryKeys } from '../lib/query-keys.js';
 import type { RunDetailResponse, ActivityItemSummary } from '../lib/types.js';
@@ -130,6 +131,7 @@ export function ActivityPage() {
             <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
               <Input value={search} onChange={(event) => setSearch(event.currentTarget.value)} placeholder="Filter by run, objective, actor, state..." style={{ flex: 1, minWidth: 280 }} />
               <Button
+                type="button"
                 variant="secondary"
                 onClick={async () => {
                   if (!selectedRunId) return;
@@ -139,17 +141,7 @@ export function ActivityPage() {
               >
                 Copy run id
               </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  if (selectedRunId) {
-                    router.push(`/operate?runId=${encodeURIComponent(selectedRunId)}`);
-                  }
-                }}
-                disabled={!selectedRunId}
-              >
-                Open in Operate
-              </Button>
+              {selectedRunId && <NavChip href={`/operate?runId=${encodeURIComponent(selectedRunId)}`}>Open in Operate</NavChip>}
             </div>
             <DenseTable
               table={table}

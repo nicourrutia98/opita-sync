@@ -21,6 +21,7 @@ import {
   StateBlock,
   Textarea
 } from '../../../../packages/ui-core/src/primitives.js';
+import { NavChip } from '../components.js';
 import { approvePreExecution, approveRelease, fetchActivity, fetchRun, fetchViewModel, releaseCheck, startRun } from '../lib/api.js';
 import { queryKeys } from '../lib/query-keys.js';
 import { runComposerSchema, type RunComposerValues } from '../lib/schemas.js';
@@ -192,16 +193,7 @@ export function OperatePage() {
                   >
                     Copy run id
                   </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      if (run?.runId) router.push(`/activity?runId=${encodeURIComponent(run.runId)}`);
-                    }}
-                    disabled={!run?.runId}
-                  >
-                    Open in Activity
-                  </Button>
+                  {run?.runId && <NavChip href={`/activity?runId=${encodeURIComponent(run.runId)}`}>Open in Activity</NavChip>}
                   <Button
                     variant="secondary"
                     size="sm"
@@ -315,18 +307,13 @@ export function OperatePage() {
                   <FieldLabel>Asset quick switch</FieldLabel>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {(viewModelQuery.data?.catalog ?? []).map((item) => (
-                      <Button
-                        key={item.assetId}
-                        type="button"
-                        size="sm"
-                        variant={item.assetId === selectedAsset?.assetId ? 'primary' : 'secondary'}
-                        onClick={() => {
-                          const nextUrl = `/operate?assetId=${encodeURIComponent(item.assetId)}${runId ? `&runId=${encodeURIComponent(runId)}` : ''}`;
-                          router.replace(nextUrl);
-                        }}
-                      >
-                        {item.name}
-                      </Button>
+                      <NavChip
+                      key={item.assetId}
+                      href={`/operate?assetId=${encodeURIComponent(item.assetId)}${runId ? `&runId=${encodeURIComponent(runId)}` : ''}`}
+                      active={item.assetId === selectedAsset?.assetId}
+                    >
+                      {item.name}
+                    </NavChip>
                     ))}
                   </div>
                 </div>

@@ -8,6 +8,7 @@ import { ArrowRight, BellRing, ShieldAlert } from 'lucide-react';
 import { AppShellLayout } from '../../../../packages/ui-opita/src/shell.js';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, MetricCard, StateBlock } from '../../../../packages/ui-core/src/primitives.js';
 import { DenseTable } from '../../../../packages/ui-core/src/table.js';
+import { NavChip } from '../components.js';
 import { fetchInbox } from '../lib/api.js';
 import { queryKeys } from '../lib/query-keys.js';
 import type { InboxItemSummary } from '../lib/types.js';
@@ -40,12 +41,12 @@ export function InboxPage() {
         id: 'open',
         header: 'Open',
         cell: (info) => (
-          <Button variant="secondary" size="sm" onClick={() => router.push(`/operate?runId=${encodeURIComponent(info.row.original.runId)}`)}>
+          <NavChip href={`/operate?runId=${encodeURIComponent(info.row.original.runId)}`}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <ArrowRight size={16} />
               Open
             </span>
-          </Button>
+          </NavChip>
         )
       })
     ],
