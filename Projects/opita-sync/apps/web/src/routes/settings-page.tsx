@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { usePathname, useRouter } from 'next/navigation';
+import { Copy, RefreshCw } from 'lucide-react';
 import { AppShellLayout } from '../../../../packages/ui-opita/src/shell.js';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, MetricCard, StateBlock, Textarea } from '../../../../packages/ui-core/src/primitives.js';
 import { fetchSettings, updateSettings } from '../lib/api.js';
@@ -78,6 +79,32 @@ export function SettingsPage() {
                   <div>Tenant: {backend.tenantName}</div>
                   <div>Providers: {backend.activeProviders.join(', ')}</div>
                   <div>Environments: {backend.environments.join(', ')}</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(backend.tenantId);
+                      }}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <Copy size={14} />
+                        Copy tenant id
+                      </span>
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        void queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+                      }}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <RefreshCw size={14} />
+                        Refresh
+                      </span>
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <StateBlock tone="empty" title="No backend settings" description="Load the settings view model to inspect providers and connectors." />

@@ -27,6 +27,10 @@ export function CatalogPage() {
   const router = useRouter();
   const pathname = usePathname();
   const [search, setSearch] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [kindFilter, setKindFilter] = useState<'all' | 'action' | 'workflow'>('all');
+  const [lifecycleFilter, setLifecycleFilter] = useState<'all' | 'published' | 'draft' | 'retired'>('all');
+  const [approvalFilter, setApprovalFilter] = useState<'all' | 'auto' | 'pre-execution' | 'pre-application' | 'double_approval'>('all');
   const [selected, setSelected] = useState<CatalogItemSummary | null>(null);
 
   const catalogQuery = useQuery({
@@ -37,9 +41,14 @@ export function CatalogPage() {
   const filtered = useMemo(() => {
     const items = catalogQuery.data?.items ?? [];
     const q = search.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((item) => `${item.assetId} ${item.name} ${item.description} ${item.kind} ${item.classificationTags.join(' ')}`.toLowerCase().includes(q));
-  }, [catalogQuery.data?.items, search]);
+    return items.filter((item) => {
+      const matchesSearch = !q || `${item.assetId} ${item.name} ${item.description} ${item.kind} ${item.classificationTags.join(' ')}`.toLowerCase().includes(q);
+      const matchesKind = kindFilter === 'all' || item.kind === kindFilter;
+      const matchesLifecycle = lifecycleFilter === 'all' || item.lifecycleState === lifecycleFilter;
+      const matchesApproval = approvalFilter === 'all' || item.approvalMode === approvalFilter;
+      return matchesSearch && matchesKind && matchesLifecycle && matchesApproval;
+    });
+  }, [approvalFilter, catalogQuery.data?.items, kindFilter, lifecycleFilter, search]);
 
   const table = useReactTable({
     data: filtered,
@@ -136,13 +145,36 @@ export function CatalogPage() {
                   <Search size={16} style={{ position: 'absolute', left: 14, top: 14, color: 'var(--muted)' }} />
                   <Input value={search} onChange={(event) => setSearch(event.currentTarget.value)} placeholder="Search assets, tags, connectors, approval mode..." style={{ paddingLeft: 40 }} />
                 </div>
-                <Button variant="secondary">
+                <Button variant="secondary" onClick={() => setFiltersOpen((current) => !current)}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                     <Filter size={16} />
-                    Filters
+                    {filtersOpen ? 'Hide filters' : 'Filters'}
                   </span>
                 </Button>
               </div>
+
+              {filtersOpen && (
+                <div style={{ display: 'grid', gap: 12, padding: 14, border: '1px solid var(--line)', borderRadius: 18, background: 'var(--surface)' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <Button size="sm" variant={kindFilter === 'all' ? 'primary' : 'secondary'} onClick={() => setKindFilter('all')}>All kinds</Button>
+                    <Button size="sm" variant={kindFilter === 'action' ? 'primary' : 'secondary'} onClick={() => setKindFilter('action')}>Actions</Button>
+                    <Button size="sm" variant={kindFilter === 'workflow' ? 'primary' : 'secondary'} onClick={() => setKindFilter('workflow')}>Workflows</Button>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <Button size="sm" variant={lifecycleFilter === 'all' ? 'primary' : 'secondary'} onClick={() => setLifecycleFilter('all')}>Any lifecycle</Button>
+                    <Button size="sm" variant={lifecycleFilter === 'published' ? 'primary' : 'secondary'} onClick={() => setLifecycleFilter('published')}>Published</Button>
+                    <Button size="sm" variant={lifecycleFilter === 'draft' ? 'primary' : 'secondary'} onClick={() => setLifecycleFilter('draft')}>Draft</Button>
+                    <Button size="sm" variant={lifecycleFilter === 'retired' ? 'primary' : 'secondary'} onClick={() => setLifecycleFilter('retired')}>Retired</Button>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <Button size="sm" variant={approvalFilter === 'all' ? 'primary' : 'secondary'} onClick={() => setApprovalFilter('all')}>Any approval</Button>
+                    <Button size="sm" variant={approvalFilter === 'auto' ? 'primary' : 'secondary'} onClick={() => setApprovalFilter('auto')}>Auto</Button>
+                    <Button size="sm" variant={approvalFilter === 'pre-execution' ? 'primary' : 'secondary'} onClick={() => setApprovalFilter('pre-execution')}>Pre-execution</Button>
+                    <Button size="sm" variant={approvalFilter === 'pre-application' ? 'primary' : 'secondary'} onClick={() => setApprovalFilter('pre-application')}>Pre-application</Button>
+                    <Button size="sm" variant={approvalFilter === 'double_approval' ? 'primary' : 'secondary'} onClick={() => setApprovalFilter('double_approval')}>Double approval</Button>
+                  </div>
+                </div>
+              )}
 
               <DenseTable
                 table={table}

@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createColumnHelper, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'next/navigation';
 import { Clock3, FileClock, History, ShieldAlert } from 'lucide-react';
 import { AppShellLayout } from '../../../../packages/ui-opita/src/shell.js';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, MetricCard, StateBlock } from '../../../../packages/ui-core/src/primitives.js';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, MetricCard, StateBlock } from '../../../../packages/ui-core/src/primitives.js';
 import { DenseTable } from '../../../../packages/ui-core/src/table.js';
 import { fetchActivity, fetchRun } from '../lib/api.js';
 import { queryKeys } from '../lib/query-keys.js';
@@ -47,6 +47,7 @@ export function ActivityPage() {
   const router = useRouter();
   const pathname = usePathname();
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const activityQuery = useQuery({
     queryKey: queryKeys.activity,
     queryFn: fetchActivity
@@ -58,8 +59,15 @@ export function ActivityPage() {
     enabled: Boolean(selectedRunId)
   });
 
+  const filteredRuns = useMemo(() => {
+    const items = activityQuery.data?.items ?? [];
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((item) => `${item.runId} ${item.objective} ${item.runState} ${item.approvalState} ${item.releaseDecision} ${item.actor}`.toLowerCase().includes(q));
+  }, [activityQuery.data?.items, search]);
+
   const table = useReactTable({
-    data: activityQuery.data?.items ?? [],
+    data: filteredRuns,
     columns: [
       columnHelper.accessor('runId', { header: 'Run', cell: (info) => <strong>{info.getValue()}</strong> }),
       columnHelper.accessor('objective', { header: 'Objective', cell: (info) => <span>{info.getValue()}</span> }),
@@ -119,6 +127,30 @@ export function ActivityPage() {
             <PanelTitle title="Operational history" subtitle="Dense, filterable and auditable." />
           </CardHeader>
           <CardContent>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+              <Input value={search} onChange={(event) => setSearch(event.currentTarget.value)} placeholder="Filter by run, objective, actor, state..." style={{ flex: 1, minWidth: 280 }} />
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  if (!selectedRunId) return;
+                  await navigator.clipboard.writeText(selectedRunId);
+                }}
+                disabled={!selectedRunId}
+              >
+                Copy run id
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  if (selectedRunId) {
+                    router.push(`/operate?runId=${encodeURIComponent(selectedRunId)}`);
+                  }
+                }}
+                disabled={!selectedRunId}
+              >
+                Open in Operate
+              </Button>
+            </div>
             <DenseTable
               table={table}
               emptyLabel="No activity yet."

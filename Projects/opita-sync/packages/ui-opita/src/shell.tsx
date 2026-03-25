@@ -151,7 +151,7 @@ export function AppShellLayout(props: AppShellLayoutProps) {
           </div>
         </aside>
 
-        <main style={{ minWidth: 0, padding: 24, display: 'grid', gap: 18 }}>
+        <main data-ui="page-shell" style={{ minWidth: 0, padding: 24, display: 'grid', gap: 18 }}>
           <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
             <div style={{ display: 'grid', gap: 6 }}>
               <div style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: tokens.subtle }}>{props.area}</div>

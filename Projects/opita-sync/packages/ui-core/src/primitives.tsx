@@ -29,11 +29,13 @@ export function Card(props: HTMLAttributes<HTMLDivElement>) {
   return (
     <section
       {...props}
+      data-ui="card"
       style={{
         background: tokens.panel,
         border: `1px solid ${tokens.line}`,
         borderRadius: 24,
         boxShadow: `0 12px 32px ${tokens.shadow}`,
+        transition: 'transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background-color 160ms ease',
         padding: 0,
         ...props.style
       }}
@@ -86,12 +88,13 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export function Button(props: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; size?: 'sm' | 'md' | 'lg' }) {
   const { tokens } = useTheme();
   const { variant = 'primary', size = 'md', style, ...rest } = props;
+  const disabled = Boolean(rest.disabled);
   const styles = useMemo(() => {
     const base = {
       borderRadius: 16,
       border: '1px solid transparent',
       fontWeight: 650,
-      cursor: 'pointer',
+      cursor: disabled ? 'not-allowed' : 'pointer',
       transition: 'transform 120ms ease, background-color 120ms ease, border-color 120ms ease, color 120ms ease'
     } as const;
     const heights = { sm: 36, md: 42, lg: 48 } as const;
@@ -130,17 +133,19 @@ export function Button(props: ButtonHTMLAttributes<HTMLButtonElement> & { varian
       boxShadow: `0 10px 24px ${tokens.shadow}`,
       height: heights[size]
     };
-  }, [size, tokens, variant]);
+  }, [disabled, size, tokens, variant]);
 
   return (
-    <button
-      {...rest}
-      style={{
-        ...styles,
-        padding: size === 'sm' ? '0 12px' : size === 'lg' ? '0 18px' : '0 16px',
-        ...style
-      }}
-    />
+      <button
+        {...rest}
+        data-ui="button"
+        style={{
+          ...styles,
+          opacity: disabled ? 0.58 : 1,
+          padding: size === 'sm' ? '0 12px' : size === 'lg' ? '0 18px' : '0 16px',
+          ...style
+        }}
+      />
   );
 }
 

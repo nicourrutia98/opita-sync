@@ -1,10 +1,12 @@
 'use client';
 
 import { createColumnHelper, getCoreRowModel, useReactTable } from '@tanstack/react-table';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'next/navigation';
+import { Copy, Filter } from 'lucide-react';
 import { AppShellLayout } from '../../../../packages/ui-opita/src/shell.js';
-import { Badge, Card, CardContent, CardHeader, CardTitle, MetricCard, StateBlock } from '../../../../packages/ui-core/src/primitives.js';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, MetricCard, StateBlock } from '../../../../packages/ui-core/src/primitives.js';
 import { DenseTable } from '../../../../packages/ui-core/src/table.js';
 import { fetchGovernance } from '../lib/api.js';
 import { queryKeys } from '../lib/query-keys.js';
@@ -24,14 +26,20 @@ function PanelTitle({ title, subtitle }: { title: string; subtitle?: string }) {
 export function GovernancePage() {
   const router = useRouter();
   const pathname = usePathname();
+  const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
+  const [ruleFilter, setRuleFilter] = useState<'all' | 'allow' | 'deny' | 'hold'>('all');
   const governanceQuery = useQuery({
     queryKey: queryKeys.governance,
     queryFn: fetchGovernance
   });
 
   const governance = governanceQuery.data;
+  const filteredRules = useMemo(() => {
+    const items = governance?.rules ?? [];
+    return items.filter((rule) => ruleFilter === 'all' || rule.effect === ruleFilter);
+  }, [governance?.rules, ruleFilter]);
   const table = useReactTable({
-    data: governance?.rules ?? [],
+    data: filteredRules,
     columns: [
       columnHelper.accessor('ruleId', { header: 'Rule', cell: (info) => <strong>{info.getValue()}</strong> }),
       columnHelper.accessor('effect', { header: 'Effect', cell: (info) => <Badge tone={info.getValue() === 'deny' ? 'danger' : info.getValue() === 'allow' ? 'success' : 'warning'}>{info.getValue()}</Badge> }),
@@ -61,6 +69,19 @@ export function GovernancePage() {
                   <div>Scope: {governance.scope}</div>
                   <div>Classification: {governance.classificationScheme}</div>
                   <div>Publication controls: {governance.publicationControls.length}</div>
+                  <div>Selected rule: {selectedRuleId ?? 'none'}</div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(governance.policySetId);
+                    }}
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <Copy size={14} />
+                      Copy policy set id
+                    </span>
+                  </Button>
                 </div>
               ) : (
                 <StateBlock tone="empty" title="No governance data" description="Load policy and authority data to inspect the control surface." />
@@ -74,6 +95,7 @@ export function GovernancePage() {
                 <div>Deny by default.</div>
                 <div>Most restrictive rule wins.</div>
                 <div>Mixed-authority content blocks by default.</div>
+                {selectedRuleId && <div>Authority row focus: {selectedRuleId}</div>}
               </div>
             </CardContent>
           </Card>
@@ -90,9 +112,23 @@ export function GovernancePage() {
 
         <Card>
           <CardHeader>
-            <PanelTitle title="Policy rules" subtitle="Precedence and obligations are explicit, not hidden." />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <PanelTitle title="Policy rules" subtitle="Precedence and obligations are explicit, not hidden." />
+              <Button variant="secondary" size="sm" onClick={() => setRuleFilter('all')}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <Filter size={14} />
+                  Clear filter
+                </span>
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+              <Button size="sm" variant={ruleFilter === 'all' ? 'primary' : 'secondary'} onClick={() => setRuleFilter('all')}>All</Button>
+              <Button size="sm" variant={ruleFilter === 'allow' ? 'primary' : 'secondary'} onClick={() => setRuleFilter('allow')}>Allow</Button>
+              <Button size="sm" variant={ruleFilter === 'deny' ? 'primary' : 'secondary'} onClick={() => setRuleFilter('deny')}>Deny</Button>
+              <Button size="sm" variant={ruleFilter === 'hold' ? 'primary' : 'secondary'} onClick={() => setRuleFilter('hold')}>Hold</Button>
+            </div>
             <DenseTable table={table} emptyLabel="No rules available." />
           </CardContent>
         </Card>
@@ -106,14 +142,19 @@ export function GovernancePage() {
               {governance ? (
                 <div style={{ display: 'grid', gap: 12 }}>
                   {governance.authorityMatrix.map((row) => (
-                    <div key={row.dimension} style={{ display: 'grid', gap: 6, padding: 14, borderRadius: 18, border: '1px solid var(--line)', background: 'var(--surface)' }}>
+                    <button
+                      type="button"
+                      key={row.dimension}
+                      onClick={() => setSelectedRuleId(row.dimension)}
+                      style={{ display: 'grid', gap: 6, padding: 14, borderRadius: 18, border: '1px solid var(--line)', background: 'var(--surface)', textAlign: 'left', cursor: 'pointer' }}
+                    >
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                         <strong>{row.dimension}</strong>
                         <Badge tone="muted">{row.roles.length} roles</Badge>
                       </div>
                       <div style={{ color: 'var(--muted)', fontSize: 13, lineHeight: 1.5 }}>{row.description}</div>
                       <div style={{ color: 'var(--muted)', fontSize: 12 }}>{row.roles.join(', ')}</div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               ) : (
