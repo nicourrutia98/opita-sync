@@ -72,7 +72,14 @@ export function ActivityPage() {
     columns: [
       columnHelper.accessor('runId', { header: 'Run', cell: (info) => <strong>{info.getValue()}</strong> }),
       columnHelper.accessor('objective', { header: 'Objective', cell: (info) => <span>{info.getValue()}</span> }),
-      columnHelper.accessor('runState', { header: 'State', cell: (info) => <Badge tone={info.getValue() === 'released' ? 'success' : info.getValue().includes('blocked') ? 'danger' : 'warning'}>{info.getValue()}</Badge> }),
+      columnHelper.accessor('runState', {
+        header: 'State',
+        cell: (info) => {
+          const value = info.getValue() ?? 'unknown';
+          const tone = value === 'released' ? 'success' : value.includes('blocked') ? 'danger' : 'warning';
+          return <Badge tone={tone}>{value}</Badge>;
+        }
+      }),
       columnHelper.accessor('approvalState', { header: 'Approval', cell: (info) => <Badge tone={info.getValue() === 'approved' ? 'success' : 'warning'}>{info.getValue()}</Badge> }),
       columnHelper.accessor('releaseDecision', { header: 'Release', cell: (info) => <Badge tone={info.getValue() === 'release' ? 'success' : info.getValue() === 'block' ? 'danger' : 'warning'}>{info.getValue()}</Badge> })
     ],
