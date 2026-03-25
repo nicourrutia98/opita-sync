@@ -1,9 +1,47 @@
+import type { EffectiveContractSummary } from '../../../packages/contracts/src/index.js';
+import type { OperateThreadEntry, StatusBadge } from '../../../packages/ui-artifacts/src/index.js';
+
 export interface OperateViewModel {
   objective: string;
   contractStatus: string;
   policyState: string;
   releaseState: string;
   warnings: string[];
+}
+
+export interface OperateWorkspaceHeader {
+  workspace: string;
+  tenantLabel: string;
+  environment: string;
+  runStatus: string;
+  badges: StatusBadge[];
+}
+
+export interface OperateWorkspaceSidePanel {
+  contract: OperateThreadEntry[];
+  plan: OperateThreadEntry[];
+  risk: OperateThreadEntry[];
+  run: OperateThreadEntry[];
+  history: OperateThreadEntry[];
+  inspector: OperateThreadEntry[];
+}
+
+export interface OperateWorkspaceViewModel {
+  header: OperateWorkspaceHeader;
+  contractSummary: EffectiveContractSummary;
+  thread: OperateThreadEntry[];
+  sidePanel: OperateWorkspaceSidePanel;
+  quickIntents: string[];
+  composer: {
+    placeholder: string;
+    canExecute: boolean;
+  };
+}
+
+export interface OperateThreadPageViewModel {
+  messages: OperateThreadEntry[];
+  nextCursor: string | null;
+  hasMore: boolean;
 }
 
 export interface CatalogItemViewModel {
@@ -61,6 +99,13 @@ export interface SettingsViewModel {
   connectors?: Array<{ connectorId: string; name: string; owner: string; status: string }>;
   credentials?: Array<{ credentialScopeId: string; status: string; connectorId: string }>;
   authConfig?: Array<{ label: string; value: string }>;
+  providerStatus?: {
+    providerId: string;
+    configured: boolean;
+    source: string;
+    defaultModel: string;
+    capabilities: string[];
+  };
 }
 
 export interface CatalogItemSummary {
@@ -128,6 +173,13 @@ export interface SettingsSummary {
   connectors: Array<{ connectorId: string; name: string; owner: string; status: string }>;
   credentials: Array<{ credentialScopeId: string; status: string; connectorId: string }>;
   authConfig: Array<{ label: string; value: string }>;
+  providerStatus?: {
+    providerId: string;
+    configured: boolean;
+    source: string;
+    defaultModel: string;
+    capabilities: string[];
+  };
 }
 
 export interface RunTimelineEvent {
@@ -166,6 +218,7 @@ export interface RunDetailViewModel {
 
 export interface WebAppViewModel {
   operate: OperateViewModel;
+  operateWorkspace?: OperateWorkspaceViewModel;
   catalog: CatalogItemViewModel[];
   inbox: InboxItemViewModel[];
   activity: ActivityItemViewModel[];

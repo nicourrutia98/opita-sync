@@ -1,3 +1,5 @@
+import type { OperateWorkspaceResponse as SharedOperateWorkspaceResponse } from '../../../../packages/api-client/src/index.js';
+
 export type ThemeMode = 'light' | 'dark';
 
 export interface ViewModelResponse {
@@ -80,6 +82,13 @@ export interface SettingsSummary {
   connectors: Array<{ connectorId: string; name: string; owner: string; status: string }>;
   credentials: Array<{ credentialScopeId: string; status: string; connectorId: string }>;
   authConfig: Array<{ label: string; value: string }>;
+  providerStatus?: {
+    providerId: string;
+    configured: boolean;
+    source: string;
+    defaultModel: string;
+    capabilities: string[];
+  };
 }
 
 export interface RunTimelineEvent {
@@ -132,4 +141,61 @@ export interface CommandRunResponse {
 export interface CommandSettingsResponse {
   ok: true;
   settings: SettingsSummary;
+}
+
+export type OperateWorkspaceResponse = SharedOperateWorkspaceResponse;
+
+export interface OperateThreadPageResponse {
+  messages: SharedOperateWorkspaceResponse['thread'];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+export interface ChatToolProposal {
+  callId: string;
+  name: string;
+  argumentsJson: string;
+  assetId?: string;
+  intentSummary?: string;
+  rationale?: string;
+  requiresApproval?: boolean;
+  riskNotes?: string[];
+}
+
+export interface ChatSessionResponse {
+  ok: true;
+  chatId: string;
+  status: 'queued' | 'streaming' | 'completed' | 'failed' | 'cancelled';
+  providerId: string;
+  model: string;
+  latestAssistantMessage: string;
+  latestProposals: ChatToolProposal[];
+  lastError?: string;
+  lastErrorCode?: string;
+  continuityMode?: 'manual' | 'provider' | 'fallback_manual';
+  recoverableError?: string;
+  interrupted?: boolean;
+  stoppedAt?: string;
+  stopReason?: 'user_stopped';
+}
+
+export interface AuthenticatedUser {
+  userId: string;
+  tenantId: string;
+  email: string;
+  displayName: string;
+  roles: string[];
+}
+
+export interface AuthSession {
+  sessionId: string;
+  tenantId: string;
+  expiresAt: string;
+  lastSeenAt: string;
+}
+
+export interface AuthSessionResponse {
+  ok: true;
+  user: AuthenticatedUser;
+  session: AuthSession;
 }

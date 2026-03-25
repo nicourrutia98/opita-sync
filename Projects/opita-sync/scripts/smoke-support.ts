@@ -109,11 +109,53 @@ async function post(baseUrl: string, path: string, body: unknown): Promise<Respo
   });
 }
 
+async function loginForApi(baseUrl: string): Promise<string> {
+  const response = await post(baseUrl, '/api/auth/login', {
+    email: 'test@test-tenant.local',
+    password: 'test123'
+  });
+  const cookie = response.headers.get('set-cookie');
+  if (!response.ok || !cookie) {
+    throw new Error('api_login_failed');
+  }
+  return cookie.split(';')[0];
+}
+
+async function authFetchJson(baseUrl: string, path: string, init: RequestInit, cookie: string) {
+  return fetch(`${baseUrl}${path}`, {
+    method: init.method ?? 'POST',
+    ...init,
+    headers: {
+      cookie,
+      'content-type': 'application/json',
+      ...(init.headers ?? {})
+    }
+  }).then((r) => r.json());
+}
+
 function extractRunRecord(payload: unknown): any | null {
   if (!payload || typeof payload !== 'object') return null;
-  const record = (payload as { record?: unknown }).record;
-  if (record && typeof record === 'object') return record;
-  return payload as any;
+  const typedPayload = payload as {
+    runState?: string;
+    timeline?: Array<{ label: string }>;
+    record?: { run?: { state?: string }; runtimeEvents?: Array<{ eventType: string }> };
+  };
+
+  if (typedPayload.runState || typedPayload.timeline) {
+    return typedPayload;
+  }
+
+  const record = typedPayload.record;
+  if (record && typeof record === 'object') {
+    return {
+      runState: record.run?.state ?? null,
+      timeline: (record.runtimeEvents ?? []).map((event) => ({
+        label: event.eventType
+      }))
+    };
+  }
+
+  return typedPayload;
 }
 
 export async function runApiSmokeSuite(): Promise<ApiSmokeSummary> {
@@ -123,32 +165,52 @@ export async function runApiSmokeSuite(): Promise<ApiSmokeSummary> {
 
   try {
     const health = await fetch(`${api.baseUrl}/health`).then((r) => r.json());
-    const viewModelBefore = await fetch(`${api.baseUrl}/api/view-model`).then((r) => r.json());
+    const cookie = await loginForApi(api.baseUrl);
+    const viewModelBefore = await fetch(`${api.baseUrl}/api/view-model`, { headers: { cookie } }).then((r) => r.json());
 
-    const startedApproval = await post(api.baseUrl, '/api/runs/start', {
-      rawIntent: 'Prepare governed follow-up draft for customer thread',
-      approvalMode: 'pre-application'
-    }).then((r) => r.json());
-    const approvalReleaseHold = await post(api.baseUrl, `/api/runs/${startedApproval.runId}/release-check`, {}).then((r) => r.json());
-    const approvalReleaseApproved = await post(api.baseUrl, `/api/runs/${startedApproval.runId}/approve-release`, {}).then((r) => r.json());
-    const approvalDetails = extractRunRecord(await fetch(`${api.baseUrl}/api/runs/${startedApproval.runId}`).then((r) => r.json()));
+    const startedApproval = await authFetchJson(api.baseUrl, '/api/runs/start', {
+      body: JSON.stringify({
+        rawIntent: 'Prepare governed follow-up draft for customer thread',
+        approvalMode: 'pre-application'
+      })
+    }, cookie);
+    const approvalReleaseHold = await authFetchJson(api.baseUrl, `/api/runs/${startedApproval.runId}/release-check`, { method: 'POST', body: JSON.stringify({}) }, cookie);
+    const approvalReleaseApproved = await authFetchJson(api.baseUrl, `/api/runs/${startedApproval.runId}/approve-release`, { method: 'POST', body: JSON.stringify({}) }, cookie);
+    const approvalDetails = extractRunRecord(await fetch(`${api.baseUrl}/api/runs/${startedApproval.runId}`, { headers: { cookie } }).then((r) => r.json()));
 
-    const startedPreExecution = await post(api.baseUrl, '/api/runs/start', {
-      rawIntent: 'Execute governed triage workflow',
-      approvalMode: 'pre-execution'
-    }).then((r) => r.json());
-    const preExecutionApproved = await post(api.baseUrl, `/api/runs/${startedPreExecution.runId}/approve-pre-execution`, {}).then((r) => r.json());
-    const preExecutionRelease = await post(api.baseUrl, `/api/runs/${startedPreExecution.runId}/release-check`, {}).then((r) => r.json());
-    const preExecutionDetails = extractRunRecord(await fetch(`${api.baseUrl}/api/runs/${startedPreExecution.runId}`).then((r) => r.json()));
+    const startedPreExecution = await authFetchJson(api.baseUrl, '/api/runs/start', {
+      body: JSON.stringify({
+        rawIntent: 'Execute governed triage workflow',
+        approvalMode: 'pre-execution'
+      })
+    }, cookie);
+    const preExecutionApproved = await authFetchJson(api.baseUrl, `/api/runs/${startedPreExecution.runId}/approve-pre-execution`, { method: 'POST', body: JSON.stringify({}) }, cookie);
+    const preExecutionRelease = await authFetchJson(api.baseUrl, `/api/runs/${startedPreExecution.runId}/release-check`, { method: 'POST', body: JSON.stringify({}) }, cookie);
+    const preExecutionDetails = extractRunRecord(await fetch(`${api.baseUrl}/api/runs/${startedPreExecution.runId}`, { headers: { cookie } }).then((r) => r.json()));
 
-    const startedMixedAuthority = await post(api.baseUrl, '/api/runs/start', {
-      rawIntent: 'Draft a customer summary that accidentally mixes restricted and allowed content',
-      approvalMode: 'pre-application'
-    }).then((r) => r.json());
-    const mixedAuthorityRelease = await post(api.baseUrl, `/api/runs/${startedMixedAuthority.runId}/release-check`, {
-      mixedAuthority: true
-    }).then((r) => r.json());
-    const mixedAuthorityDetails = extractRunRecord(await fetch(`${api.baseUrl}/api/runs/${startedMixedAuthority.runId}`).then((r) => r.json()));
+    const startedMixedAuthority = await authFetchJson(api.baseUrl, '/api/runs/start', {
+      body: JSON.stringify({
+        rawIntent: 'Draft a customer summary that accidentally mixes restricted and allowed content',
+        approvalMode: 'pre-application'
+      })
+    }, cookie);
+    const mixedAuthorityRelease = await authFetchJson(api.baseUrl, `/api/runs/${startedMixedAuthority.runId}/release-check`, {
+      method: 'POST',
+      body: JSON.stringify({ mixedAuthority: true })
+    }, cookie);
+    const mixedAuthorityDetails = extractRunRecord(await fetch(`${api.baseUrl}/api/runs/${startedMixedAuthority.runId}`, { headers: { cookie } }).then((r) => r.json()));
+
+    const analysisStarted = await authFetchJson(api.baseUrl, '/api/runs/start', {
+      body: JSON.stringify({
+        rawIntent: 'Build a governed chart of revenue trend by region'
+      })
+    }, cookie);
+    const analysisWorkspace = await fetch(`${api.baseUrl}/api/operate/workspace?runId=${analysisStarted.runId}`, {
+      headers: { cookie }
+    }).then((r) => r.json()) as {
+      thread?: Array<{ entryId: string; artifacts: Array<{ type: string }> }>;
+    };
+    const analysisEntry = analysisWorkspace.thread?.find((entry) => entry.entryId === `system:analysis:${analysisStarted.runId}`);
 
     const checks = {
       healthOk: health.ok === true,
@@ -172,6 +234,11 @@ export async function runApiSmokeSuite(): Promise<ApiSmokeSummary> {
         release: mixedAuthorityRelease.releaseDecision,
         finalState: mixedAuthorityDetails?.runState ?? null,
         runtimeEvents: mixedAuthorityDetails?.timeline?.map((event: { label: string }) => event.label) ?? []
+      },
+      seededAnalysisPath: {
+        runId: analysisStarted.runId,
+        runState: analysisStarted.runState,
+        analysisArtifacts: analysisEntry?.artifacts.map((artifact) => artifact.type) ?? []
       }
     };
 
@@ -186,7 +253,10 @@ export async function runApiSmokeSuite(): Promise<ApiSmokeSummary> {
       checks.preExecutionPath.release === 'release' &&
       checks.preExecutionPath.finalState === 'released' &&
       checks.mixedAuthorityPath.release === 'block' &&
-      checks.mixedAuthorityPath.finalState === 'release_blocked';
+      checks.mixedAuthorityPath.finalState === 'release_blocked' &&
+      checks.seededAnalysisPath.analysisArtifacts.includes('dataset_summary') &&
+      checks.seededAnalysisPath.analysisArtifacts.includes('query_summary') &&
+      checks.seededAnalysisPath.analysisArtifacts.includes('chart_spec');
 
     return {
       ok,

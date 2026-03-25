@@ -62,4 +62,34 @@ const actionTriage: ActionAsset = {
   outputContractRef: 'contract:action_customer_triage:output:v1'
 };
 
-export const seedCatalog = [actionFollowup, actionTriage];
+const actionDatasetSummary: ActionAsset = {
+  assetId: 'action_dataset_summary',
+  assetKind: 'action',
+  name: 'Dataset Summary',
+  description: 'Inspect and summarize a governed analytical dataset',
+  lifecycleState: 'published',
+  version: '1.0.0',
+  approvalMode: 'auto',
+  classificationTags: ['analytics', 'customer'],
+  connectorIds: ['connector_analytics'],
+  publishedSemanticHash: 'hash_dataset_summary_v1',
+  inputContractRef: 'contract:action_dataset_summary:input:v1',
+  outputContractRef: 'contract:action_dataset_summary:output:v1'
+};
+
+const actionChartVisualization: ActionAsset = {
+  assetId: 'action_chart_visualization',
+  assetKind: 'action',
+  name: 'Chart Visualization',
+  description: 'Build a governed chart spec from an allowed dataset',
+  lifecycleState: 'published',
+  version: '1.0.0',
+  approvalMode: 'pre-application',
+  classificationTags: ['analytics', 'customer'],
+  connectorIds: ['connector_analytics'],
+  publishedSemanticHash: 'hash_chart_visualization_v1',
+  inputContractRef: 'contract:action_chart_visualization:input:v1',
+  outputContractRef: 'contract:action_chart_visualization:output:v1'
+};
+
+export const seedCatalog = [actionFollowup, actionTriage, actionDatasetSummary, actionChartVisualization];

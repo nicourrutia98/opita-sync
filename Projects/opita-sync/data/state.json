@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-03-25T11:46:07.397Z",
+  "updatedAt": "2026-03-25T21:58:48.389Z",
   "policySet": {
     "policySetId": "policy_default_tenant_1",
     "version": "1.0.0",
@@ -496,13 +496,1338 @@
           "reason": "execution_done"
         }
       ]
+    },
+    {
+      "runId": "run_3",
+      "contract": {
+        "contractId": "contract_3",
+        "revision": 1,
+        "tenantId": "test-tenant",
+        "environment": "dev",
+        "initiatorUserId": "user_test_tenant_admin",
+        "authorityContextId": "authority:user_test_tenant_admin",
+        "sourceType": "chat",
+        "objectiveText": "Hola",
+        "requestedOutcome": "action_execution",
+        "successCriteria": [
+          "contract normalized",
+          "await admissibility evaluation"
+        ],
+        "urgency": "normal",
+        "domainContext": "catalog_action",
+        "includedEntities": [],
+        "excludedEntities": [],
+        "allowedDataDomains": [
+          "customer"
+        ],
+        "excludedDataDomains": [],
+        "allowedExternalEffectClass": "draft_only",
+        "requestedActionAssetId": "action_customer_followup",
+        "dynamicCompositionRequested": false,
+        "classificationCeiling": "confidential",
+        "allowedConnectorIds": [
+          "connector_email"
+        ],
+        "allowedCredentialScopeIds": [
+          "cred:connector_email"
+        ],
+        "approvalExpectationMode": "pre-application",
+        "draftGenerationAllowed": true,
+        "applyAllowed": false,
+        "sendAllowed": false,
+        "outputSensitivityExpectation": "governed_output_required",
+        "desiredOutputForm": "structured_summary",
+        "disclosureAudience": "initiator",
+        "exportRequested": false,
+        "sendRequested": false,
+        "draftOnly": true,
+        "userConstraints": [],
+        "systemConstraints": [
+          "intent_normalized_before_execution"
+        ],
+        "policyConstraints": [],
+        "classificationConstraints": [],
+        "status": "approval_required",
+        "createdAt": "2026-03-25T16:36:41.135Z",
+        "updatedAt": "2026-03-25T16:36:41.135Z"
+      },
+      "admissibility": {
+        "decisionId": "contract:contract_3:r1:approval_required",
+        "contractRef": "contract:contract_3:r1",
+        "status": "approval_required",
+        "policyOutcome": "allow",
+        "restrictions": [],
+        "reasons": [
+          "approval_required_before_progress"
+        ],
+        "requiredApprovalMode": "pre-application"
+      },
+      "policyDecision": {
+        "decisionId": "policy_default_tenant_1:allow_customer_drafts",
+        "outcome": "allow",
+        "matchedRuleIds": [
+          "allow_customer_drafts"
+        ],
+        "restrictiveRuleIds": [
+          "allow_customer_drafts"
+        ],
+        "obligations": [],
+        "restrictedConnectorIds": [],
+        "restrictedDataDomains": [],
+        "approvalRequirements": [],
+        "explanationSummary": "Customer-domain draft operations are allowed under tenant policy.",
+        "createdAt": "2026-03-25T16:36:41.147Z"
+      },
+      "classification": {
+        "artifactId": "classification:contract_3:r1",
+        "classification": {
+          "level": "confidential",
+          "tags": [
+            "customer"
+          ]
+        },
+        "handlingObligations": [
+          "tags:customer"
+        ],
+        "releaseRestrictions": [],
+        "mixedAuthorityRisk": "none"
+      },
+      "plan": {
+        "planId": "plan:contract:contract_3:r1:provisional",
+        "contractRef": "contract:contract_3:r1",
+        "admissibilityDecisionRef": "contract:contract_3:r1:approval_required",
+        "status": "compiled",
+        "selectedAssetRefs": [
+          "action_customer_followup"
+        ],
+        "steps": [
+          {
+            "stepId": "step:1",
+            "assetRef": "action_customer_followup",
+            "kind": "action",
+            "connectorIds": []
+          }
+        ],
+        "approvalMode": "pre-application",
+        "outputCheckpointRequired": true
+      },
+      "run": {
+        "runId": "run_3",
+        "tenantId": "test-tenant",
+        "environment": "dev",
+        "contractId": "contract_3",
+        "contractRevision": 1,
+        "planSnapshot": {
+          "planId": "plan:contract:contract_3:r1:provisional",
+          "contractRef": "contract:contract_3:r1",
+          "admissibilityDecisionRef": "contract:contract_3:r1:approval_required",
+          "status": "compiled",
+          "selectedAssetRefs": [
+            "action_customer_followup"
+          ],
+          "steps": [
+            {
+              "stepId": "step:1",
+              "assetRef": "action_customer_followup",
+              "kind": "action",
+              "connectorIds": []
+            }
+          ],
+          "approvalMode": "pre-application",
+          "outputCheckpointRequired": true
+        },
+        "state": "execution_completed",
+        "createdAt": "2026-03-25T16:36:41.156Z",
+        "updatedAt": "2026-03-25T16:36:41.157Z"
+      },
+      "approvalCase": {
+        "approvalCaseId": "approval:run_3:1",
+        "runId": "run_3",
+        "contractId": "contract_3",
+        "contractRevision": 1,
+        "mode": "pre-application",
+        "approverIds": [
+          "approver_1"
+        ],
+        "evidenceRefs": [
+          "contract:contract_3:r1"
+        ],
+        "state": "pending",
+        "requestedAt": "2026-03-25T16:36:41.155Z"
+      },
+      "inboxItems": [
+        {
+          "inboxItemId": "inbox:approval:run_3:1",
+          "itemType": "approval",
+          "runId": "run_3",
+          "status": "pending",
+          "summary": "Approval required for run run_3"
+        }
+      ],
+      "runtimeEvents": [
+        {
+          "eventId": "run-event:run_3:run.created:1774456601157",
+          "runId": "run_3",
+          "eventType": "run.created",
+          "toState": "execution_completed",
+          "occurredAt": "2026-03-25T16:36:41.158Z",
+          "reason": "run_initialized"
+        },
+        {
+          "eventId": "run-event:run_3:run.execution_completed:1774456601160",
+          "runId": "run_3",
+          "eventType": "run.execution_completed",
+          "fromState": "queued",
+          "toState": "execution_completed",
+          "occurredAt": "2026-03-25T16:36:41.160Z",
+          "reason": "execution_done"
+        }
+      ]
+    },
+    {
+      "runId": "run_4",
+      "contract": {
+        "contractId": "contract_4",
+        "revision": 1,
+        "tenantId": "test-tenant",
+        "environment": "dev",
+        "initiatorUserId": "user_test_tenant_admin",
+        "authorityContextId": "authority:user_test_tenant_admin",
+        "sourceType": "chat",
+        "objectiveText": "Prepare a governed customer follow-up draft",
+        "requestedOutcome": "action_execution",
+        "successCriteria": [
+          "contract normalized",
+          "await admissibility evaluation"
+        ],
+        "urgency": "normal",
+        "domainContext": "catalog_action",
+        "includedEntities": [],
+        "excludedEntities": [],
+        "allowedDataDomains": [
+          "customer"
+        ],
+        "excludedDataDomains": [],
+        "allowedExternalEffectClass": "draft_only",
+        "requestedActionAssetId": "action_customer_followup",
+        "dynamicCompositionRequested": false,
+        "classificationCeiling": "confidential",
+        "allowedConnectorIds": [
+          "connector_email"
+        ],
+        "allowedCredentialScopeIds": [
+          "cred:connector_email"
+        ],
+        "approvalExpectationMode": "pre-application",
+        "draftGenerationAllowed": true,
+        "applyAllowed": false,
+        "sendAllowed": false,
+        "outputSensitivityExpectation": "governed_output_required",
+        "desiredOutputForm": "structured_summary",
+        "disclosureAudience": "initiator",
+        "exportRequested": false,
+        "sendRequested": false,
+        "draftOnly": true,
+        "userConstraints": [],
+        "systemConstraints": [
+          "intent_normalized_before_execution"
+        ],
+        "policyConstraints": [],
+        "classificationConstraints": [],
+        "status": "approval_required",
+        "createdAt": "2026-03-25T18:18:50.900Z",
+        "updatedAt": "2026-03-25T18:18:50.900Z"
+      },
+      "admissibility": {
+        "decisionId": "contract:contract_4:r1:approval_required",
+        "contractRef": "contract:contract_4:r1",
+        "status": "approval_required",
+        "policyOutcome": "allow",
+        "restrictions": [],
+        "reasons": [
+          "approval_required_before_progress"
+        ],
+        "requiredApprovalMode": "pre-application"
+      },
+      "policyDecision": {
+        "decisionId": "policy_default_tenant_1:allow_customer_drafts",
+        "outcome": "allow",
+        "matchedRuleIds": [
+          "allow_customer_drafts"
+        ],
+        "restrictiveRuleIds": [
+          "allow_customer_drafts"
+        ],
+        "obligations": [],
+        "restrictedConnectorIds": [],
+        "restrictedDataDomains": [],
+        "approvalRequirements": [],
+        "explanationSummary": "Customer-domain draft operations are allowed under tenant policy.",
+        "createdAt": "2026-03-25T18:18:50.903Z"
+      },
+      "classification": {
+        "artifactId": "classification:contract_4:r1",
+        "classification": {
+          "level": "confidential",
+          "tags": [
+            "customer"
+          ]
+        },
+        "handlingObligations": [
+          "tags:customer"
+        ],
+        "releaseRestrictions": [],
+        "mixedAuthorityRisk": "none"
+      },
+      "plan": {
+        "planId": "plan:contract:contract_4:r1:provisional",
+        "contractRef": "contract:contract_4:r1",
+        "admissibilityDecisionRef": "contract:contract_4:r1:approval_required",
+        "status": "compiled",
+        "selectedAssetRefs": [
+          "action_customer_followup"
+        ],
+        "steps": [
+          {
+            "stepId": "step:1",
+            "assetRef": "action_customer_followup",
+            "kind": "action",
+            "connectorIds": []
+          }
+        ],
+        "approvalMode": "pre-application",
+        "outputCheckpointRequired": true
+      },
+      "run": {
+        "runId": "run_4",
+        "tenantId": "test-tenant",
+        "environment": "dev",
+        "contractId": "contract_4",
+        "contractRevision": 1,
+        "planSnapshot": {
+          "planId": "plan:contract:contract_4:r1:provisional",
+          "contractRef": "contract:contract_4:r1",
+          "admissibilityDecisionRef": "contract:contract_4:r1:approval_required",
+          "status": "compiled",
+          "selectedAssetRefs": [
+            "action_customer_followup"
+          ],
+          "steps": [
+            {
+              "stepId": "step:1",
+              "assetRef": "action_customer_followup",
+              "kind": "action",
+              "connectorIds": []
+            }
+          ],
+          "approvalMode": "pre-application",
+          "outputCheckpointRequired": true
+        },
+        "state": "execution_completed",
+        "createdAt": "2026-03-25T18:18:50.906Z",
+        "updatedAt": "2026-03-25T18:18:50.907Z"
+      },
+      "approvalCase": {
+        "approvalCaseId": "approval:run_4:1",
+        "runId": "run_4",
+        "contractId": "contract_4",
+        "contractRevision": 1,
+        "mode": "pre-application",
+        "approverIds": [
+          "approver_1"
+        ],
+        "evidenceRefs": [
+          "contract:contract_4:r1"
+        ],
+        "state": "pending",
+        "requestedAt": "2026-03-25T18:18:50.906Z"
+      },
+      "inboxItems": [
+        {
+          "inboxItemId": "inbox:approval:run_4:1",
+          "itemType": "approval",
+          "runId": "run_4",
+          "status": "pending",
+          "summary": "Approval required for run run_4"
+        }
+      ],
+      "runtimeEvents": [
+        {
+          "eventId": "run-event:run_4:run.created:1774462730907",
+          "runId": "run_4",
+          "eventType": "run.created",
+          "toState": "execution_completed",
+          "occurredAt": "2026-03-25T18:18:50.908Z",
+          "reason": "run_initialized"
+        },
+        {
+          "eventId": "run-event:run_4:run.execution_completed:1774462730909",
+          "runId": "run_4",
+          "eventType": "run.execution_completed",
+          "fromState": "queued",
+          "toState": "execution_completed",
+          "occurredAt": "2026-03-25T18:18:50.909Z",
+          "reason": "execution_done"
+        }
+      ]
+    },
+    {
+      "runId": "run_5",
+      "contract": {
+        "contractId": "contract_5",
+        "revision": 1,
+        "tenantId": "test-tenant",
+        "environment": "dev",
+        "initiatorUserId": "user_test_tenant_admin",
+        "authorityContextId": "authority:user_test_tenant_admin",
+        "sourceType": "chat",
+        "objectiveText": "No eres chat gpt o algo así?",
+        "requestedOutcome": "action_execution",
+        "successCriteria": [
+          "contract normalized",
+          "await admissibility evaluation"
+        ],
+        "urgency": "normal",
+        "domainContext": "catalog_action",
+        "includedEntities": [],
+        "excludedEntities": [],
+        "allowedDataDomains": [
+          "customer"
+        ],
+        "excludedDataDomains": [],
+        "allowedExternalEffectClass": "draft_only",
+        "requestedActionAssetId": "action_customer_followup",
+        "dynamicCompositionRequested": false,
+        "classificationCeiling": "confidential",
+        "allowedConnectorIds": [
+          "connector_email"
+        ],
+        "allowedCredentialScopeIds": [
+          "cred:connector_email"
+        ],
+        "approvalExpectationMode": "pre-application",
+        "draftGenerationAllowed": true,
+        "applyAllowed": false,
+        "sendAllowed": false,
+        "outputSensitivityExpectation": "governed_output_required",
+        "desiredOutputForm": "structured_summary",
+        "disclosureAudience": "initiator",
+        "exportRequested": false,
+        "sendRequested": false,
+        "draftOnly": true,
+        "userConstraints": [],
+        "systemConstraints": [
+          "intent_normalized_before_execution"
+        ],
+        "policyConstraints": [],
+        "classificationConstraints": [],
+        "status": "approval_required",
+        "createdAt": "2026-03-25T18:48:23.893Z",
+        "updatedAt": "2026-03-25T18:48:23.893Z"
+      },
+      "admissibility": {
+        "decisionId": "contract:contract_5:r1:approval_required",
+        "contractRef": "contract:contract_5:r1",
+        "status": "approval_required",
+        "policyOutcome": "allow",
+        "restrictions": [],
+        "reasons": [
+          "approval_required_before_progress"
+        ],
+        "requiredApprovalMode": "pre-application"
+      },
+      "policyDecision": {
+        "decisionId": "policy_default_tenant_1:allow_customer_drafts",
+        "outcome": "allow",
+        "matchedRuleIds": [
+          "allow_customer_drafts"
+        ],
+        "restrictiveRuleIds": [
+          "allow_customer_drafts"
+        ],
+        "obligations": [],
+        "restrictedConnectorIds": [],
+        "restrictedDataDomains": [],
+        "approvalRequirements": [],
+        "explanationSummary": "Customer-domain draft operations are allowed under tenant policy.",
+        "createdAt": "2026-03-25T18:48:23.895Z"
+      },
+      "classification": {
+        "artifactId": "classification:contract_5:r1",
+        "classification": {
+          "level": "confidential",
+          "tags": [
+            "customer"
+          ]
+        },
+        "handlingObligations": [
+          "tags:customer"
+        ],
+        "releaseRestrictions": [],
+        "mixedAuthorityRisk": "none"
+      },
+      "plan": {
+        "planId": "plan:contract:contract_5:r1:provisional",
+        "contractRef": "contract:contract_5:r1",
+        "admissibilityDecisionRef": "contract:contract_5:r1:approval_required",
+        "status": "compiled",
+        "selectedAssetRefs": [
+          "action_customer_followup"
+        ],
+        "steps": [
+          {
+            "stepId": "step:1",
+            "assetRef": "action_customer_followup",
+            "kind": "action",
+            "connectorIds": []
+          }
+        ],
+        "approvalMode": "pre-application",
+        "outputCheckpointRequired": true
+      },
+      "run": {
+        "runId": "run_5",
+        "tenantId": "test-tenant",
+        "environment": "dev",
+        "contractId": "contract_5",
+        "contractRevision": 1,
+        "planSnapshot": {
+          "planId": "plan:contract:contract_5:r1:provisional",
+          "contractRef": "contract:contract_5:r1",
+          "admissibilityDecisionRef": "contract:contract_5:r1:approval_required",
+          "status": "compiled",
+          "selectedAssetRefs": [
+            "action_customer_followup"
+          ],
+          "steps": [
+            {
+              "stepId": "step:1",
+              "assetRef": "action_customer_followup",
+              "kind": "action",
+              "connectorIds": []
+            }
+          ],
+          "approvalMode": "pre-application",
+          "outputCheckpointRequired": true
+        },
+        "state": "execution_completed",
+        "createdAt": "2026-03-25T18:48:23.896Z",
+        "updatedAt": "2026-03-25T18:48:23.896Z"
+      },
+      "approvalCase": {
+        "approvalCaseId": "approval:run_5:1",
+        "runId": "run_5",
+        "contractId": "contract_5",
+        "contractRevision": 1,
+        "mode": "pre-application",
+        "approverIds": [
+          "approver_1"
+        ],
+        "evidenceRefs": [
+          "contract:contract_5:r1"
+        ],
+        "state": "pending",
+        "requestedAt": "2026-03-25T18:48:23.896Z"
+      },
+      "inboxItems": [
+        {
+          "inboxItemId": "inbox:approval:run_5:1",
+          "itemType": "approval",
+          "runId": "run_5",
+          "status": "pending",
+          "summary": "Approval required for run run_5"
+        }
+      ],
+      "runtimeEvents": [
+        {
+          "eventId": "run-event:run_5:run.created:1774464503896",
+          "runId": "run_5",
+          "eventType": "run.created",
+          "toState": "execution_completed",
+          "occurredAt": "2026-03-25T18:48:23.897Z",
+          "reason": "run_initialized"
+        },
+        {
+          "eventId": "run-event:run_5:run.execution_completed:1774464503897",
+          "runId": "run_5",
+          "eventType": "run.execution_completed",
+          "fromState": "queued",
+          "toState": "execution_completed",
+          "occurredAt": "2026-03-25T18:48:23.897Z",
+          "reason": "execution_done"
+        }
+      ]
+    }
+  ],
+  "chatRecords": [
+    {
+      "chatId": "chat_1",
+      "providerId": "openai",
+      "model": "gpt-5-mini",
+      "status": "failed",
+      "startedAt": "2026-03-25T14:12:50.981Z",
+      "updatedAt": "2026-03-25T14:12:50.990Z",
+      "latestUserMessage": "Hola",
+      "latestAssistantMessage": "",
+      "latestProposals": [],
+      "history": [
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T14:12:50.981Z"
+        }
+      ],
+      "lastError": "openai_not_configured",
+      "sequenceNumber": 0,
+      "providerState": {
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      }
+    },
+    {
+      "chatId": "chat_2",
+      "providerId": "openai",
+      "model": "gpt-5-mini",
+      "status": "failed",
+      "startedAt": "2026-03-25T14:13:02.689Z",
+      "updatedAt": "2026-03-25T14:13:02.693Z",
+      "latestUserMessage": "Hola",
+      "latestAssistantMessage": "",
+      "latestProposals": [],
+      "history": [
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T14:13:02.689Z"
+        }
+      ],
+      "lastError": "openai_not_configured",
+      "sequenceNumber": 0,
+      "providerState": {
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      }
+    },
+    {
+      "chatId": "chat_3",
+      "providerId": "openai",
+      "model": "gpt-5-mini",
+      "status": "failed",
+      "startedAt": "2026-03-25T14:13:12.962Z",
+      "updatedAt": "2026-03-25T14:13:16.906Z",
+      "latestUserMessage": "Hola",
+      "latestAssistantMessage": "",
+      "latestProposals": [],
+      "history": [
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T14:13:12.962Z"
+        },
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T14:13:14.803Z"
+        },
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T14:13:16.899Z"
+        }
+      ],
+      "lastError": "openai_not_configured",
+      "sequenceNumber": 0,
+      "providerState": {
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      }
+    },
+    {
+      "chatId": "chat_4",
+      "providerId": "openai",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "status": "completed",
+      "startedAt": "2026-03-25T14:13:29.360Z",
+      "updatedAt": "2026-03-25T14:18:58.404Z",
+      "latestUserMessage": "Hola",
+      "latestAssistantMessage": "Hello! How can I assist you today? If you have any specific tasks or requests related to customer follow-ups, triage, or other governed actions, please let me know.",
+      "latestProposals": [],
+      "history": [
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T14:13:29.360Z"
+        },
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T14:18:56.019Z"
+        },
+        {
+          "role": "assistant",
+          "content": "Hello! How can I assist you today? If you have any specific tasks or requests related to customer follow-ups, triage, or other governed actions, please let me know.",
+          "createdAt": "2026-03-25T14:18:58.404Z"
+        }
+      ],
+      "latestResponseId": "resp_042c86175dfbb7bf0169c3eecd5cc88193a864811f81109a35",
+      "sequenceNumber": 0,
+      "providerState": {
+        "lastResponseId": "resp_042c86175dfbb7bf0169c3eecd5cc88193a864811f81109a35",
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      }
+    },
+    {
+      "chatId": "chat_5",
+      "providerId": "openai",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "status": "streaming",
+      "startedAt": "2026-03-25T14:16:14.883Z",
+      "updatedAt": "2026-03-25T14:16:16.928Z",
+      "latestUserMessage": "Hola",
+      "latestAssistantMessage": "Hola, ¿en qué puedo ayudarte hoy?",
+      "latestProposals": [],
+      "history": [
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T14:16:14.883Z"
+        }
+      ],
+      "latestResponseId": "resp_0d872963f30731430169c3ee2c3a588196b8b3dfa9506521af",
+      "sequenceNumber": 0,
+      "providerState": {
+        "lastResponseId": "resp_0d872963f30731430169c3ee2c3a588196b8b3dfa9506521af",
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      }
+    },
+    {
+      "chatId": "chat_6",
+      "providerId": "openai",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "status": "completed",
+      "startedAt": "2026-03-25T14:16:15.156Z",
+      "updatedAt": "2026-03-25T14:16:17.201Z",
+      "latestUserMessage": "Hola",
+      "latestAssistantMessage": "You greeted with \"Hola,\" which means \"Hello\" in Spanish. How can I assist you today?",
+      "latestProposals": [],
+      "history": [
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T14:16:15.156Z"
+        },
+        {
+          "role": "assistant",
+          "content": "You greeted with \"Hola,\" which means \"Hello\" in Spanish. How can I assist you today?",
+          "createdAt": "2026-03-25T14:16:17.201Z"
+        }
+      ],
+      "latestResponseId": "resp_02a2ebe90f06f8f60169c3ee2c69e08194be7ced1b528906aa",
+      "sequenceNumber": 0,
+      "providerState": {
+        "lastResponseId": "resp_02a2ebe90f06f8f60169c3ee2c69e08194be7ced1b528906aa",
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      }
+    },
+    {
+      "chatId": "chat_7",
+      "providerId": "openai",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "status": "completed",
+      "startedAt": "2026-03-25T16:36:53.215Z",
+      "updatedAt": "2026-03-25T16:36:57.316Z",
+      "latestUserMessage": "Hola",
+      "latestAssistantMessage": "Hola, ¿en qué puedo ayudarte hoy? Si tienes alguna solicitud específica o necesitas asistencia con algo, por favor dime.",
+      "latestProposals": [],
+      "history": [
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T16:36:53.215Z"
+        },
+        {
+          "role": "assistant",
+          "content": "Hola, ¿en qué puedo ayudarte hoy? Si tienes alguna solicitud específica o necesitas asistencia con algo, por favor dime.",
+          "createdAt": "2026-03-25T16:36:57.316Z"
+        }
+      ],
+      "latestResponseId": "resp_08fe2ff5c7771dd90169c40f2371b081968b1cb4146b646e37",
+      "sequenceNumber": 0,
+      "providerState": {
+        "lastResponseId": "resp_08fe2ff5c7771dd90169c40f2371b081968b1cb4146b646e37",
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      }
+    },
+    {
+      "chatId": "chat_8",
+      "providerId": "openai",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "status": "failed",
+      "startedAt": "2026-03-25T18:47:50.146Z",
+      "updatedAt": "2026-03-25T18:58:24.568Z",
+      "latestUserMessage": "Qué IA eres?",
+      "latestAssistantMessage": "",
+      "latestProposals": [],
+      "history": [
+        {
+          "role": "user",
+          "content": "Hola que modelo eres?",
+          "createdAt": "2026-03-25T18:47:50.146Z"
+        },
+        {
+          "role": "assistant",
+          "content": "Me presento como el asistente de planificación gobernada para Opita Sync, diseñado para ayudar con la gestión y sugerencia de acciones gobernadas según su solicitud. No soy un modelo en sí mismo, sino un asistente integrado en esta plataforma. ¿En qué puedo ayudarle hoy?",
+          "createdAt": "2026-03-25T18:47:55.317Z"
+        },
+        {
+          "role": "user",
+          "content": "No eres chat gpt o algo así?",
+          "createdAt": "2026-03-25T18:48:33.464Z"
+        },
+        {
+          "role": "user",
+          "content": "No eres chat gpt o algo así?",
+          "createdAt": "2026-03-25T18:48:45.643Z"
+        },
+        {
+          "role": "user",
+          "content": "No eres chat gpt o algo así?",
+          "createdAt": "2026-03-25T18:50:30.782Z"
+        },
+        {
+          "role": "user",
+          "content": "Qué IA eres?",
+          "createdAt": "2026-03-25T18:58:23.597Z"
+        }
+      ],
+      "latestResponseId": "resp_078091bb25862cf90169c42dd464e0819585857d462fcec8bc",
+      "lastError": "400 Previous response with id 'resp_078091bb25862cf90169c42dd464e0819585857d462fcec8bc' not found.",
+      "sequenceNumber": 0,
+      "providerState": {
+        "lastResponseId": "resp_078091bb25862cf90169c42dd464e0819585857d462fcec8bc",
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      }
+    },
+    {
+      "chatId": "chat_9",
+      "providerId": "openai",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "status": "failed",
+      "startedAt": "2026-03-25T19:09:39.332Z",
+      "updatedAt": "2026-03-25T19:09:53.450Z",
+      "latestUserMessage": "Eres chat gpt?",
+      "latestAssistantMessage": "",
+      "latestProposals": [],
+      "history": [
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T19:09:39.332Z"
+        },
+        {
+          "role": "assistant",
+          "content": "Hola, ¿en qué puedo ayudarte hoy? Si tienes alguna consulta o necesitas asistencia específica, por favor dime.",
+          "createdAt": "2026-03-25T19:09:42.355Z"
+        },
+        {
+          "role": "user",
+          "content": "Eres chat gpt?",
+          "createdAt": "2026-03-25T19:09:52.427Z"
+        }
+      ],
+      "latestResponseId": "resp_06a180107307ad0f0169c432f1159881908449659f8ad3c41a",
+      "lastError": "400 Previous response with id 'resp_06a180107307ad0f0169c432f1159881908449659f8ad3c41a' not found.",
+      "sequenceNumber": 0,
+      "providerState": {
+        "lastResponseId": "resp_06a180107307ad0f0169c432f1159881908449659f8ad3c41a",
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      }
+    },
+    {
+      "chatId": "chat_10",
+      "providerId": "openai",
+      "model": "gpt-5-mini",
+      "status": "failed",
+      "startedAt": "2026-03-25T19:16:46.075Z",
+      "updatedAt": "2026-03-25T19:16:57.269Z",
+      "sequenceNumber": 1,
+      "latestUserMessage": "Hola",
+      "latestAssistantMessage": "",
+      "latestProposals": [],
+      "providerState": {
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      },
+      "history": [
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T19:16:46.075Z"
+        },
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T19:16:57.124Z"
+        }
+      ],
+      "lastError": "openai_not_configured"
+    },
+    {
+      "chatId": "chat_11",
+      "providerId": "openai",
+      "model": "gpt-5-mini",
+      "status": "failed",
+      "startedAt": "2026-03-25T19:39:19.958Z",
+      "updatedAt": "2026-03-25T19:40:05.898Z",
+      "sequenceNumber": 2,
+      "latestUserMessage": "Tienes IA instalad?",
+      "latestAssistantMessage": "",
+      "latestProposals": [],
+      "providerState": {
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      },
+      "history": [
+        {
+          "role": "user",
+          "content": "Eres chat gpt?",
+          "createdAt": "2026-03-25T19:39:19.958Z"
+        },
+        {
+          "role": "user",
+          "content": "Eres chat gpt?",
+          "createdAt": "2026-03-25T19:39:25.024Z"
+        },
+        {
+          "role": "user",
+          "content": "Tienes IA instalad?",
+          "createdAt": "2026-03-25T19:40:05.770Z"
+        }
+      ],
+      "lastError": "openai_not_configured"
+    },
+    {
+      "chatId": "chat_12",
+      "providerId": "openai",
+      "model": "gpt-5-mini",
+      "status": "failed",
+      "startedAt": "2026-03-25T19:40:48.488Z",
+      "updatedAt": "2026-03-25T19:40:48.618Z",
+      "sequenceNumber": 0,
+      "latestUserMessage": "Hola",
+      "latestAssistantMessage": "",
+      "latestProposals": [],
+      "providerState": {
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      },
+      "history": [
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T19:40:48.488Z"
+        }
+      ],
+      "lastError": "openai_not_configured"
+    },
+    {
+      "chatId": "chat_13",
+      "providerId": "openai",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "status": "completed",
+      "startedAt": "2026-03-25T19:42:25.421Z",
+      "updatedAt": "2026-03-25T19:42:27.422Z",
+      "sequenceNumber": 0,
+      "latestUserMessage": "Hola",
+      "latestAssistantMessage": "Hola, ¿en qué puedo ayudarte hoy? Si tienes alguna tarea o consulta específica, por favor dime para orientarte mejor.",
+      "latestProposals": [],
+      "providerState": {
+        "lastResponseId": "resp_03a8d03329800c0b0169c43a9ef5dc8196a9212566b10c20ee",
+        "lastRequestId": "req_80160cfe145b4c58b02c0f3458537578",
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      },
+      "history": [
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T19:42:25.421Z"
+        },
+        {
+          "role": "assistant",
+          "content": "Hola, ¿en qué puedo ayudarte hoy? Si tienes alguna tarea o consulta específica, por favor dime para orientarte mejor.",
+          "createdAt": "2026-03-25T19:42:27.422Z"
+        }
+      ]
+    },
+    {
+      "chatId": "chat_14",
+      "providerId": "openai",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "status": "completed",
+      "startedAt": "2026-03-25T19:52:37.904Z",
+      "updatedAt": "2026-03-25T19:52:41.490Z",
+      "sequenceNumber": 0,
+      "latestUserMessage": "Hola",
+      "latestAssistantMessage": "Hola, ¿en qué puedo asistirte hoy? ¿Tienes alguna consulta o tarea específica relacionada con la gestión operativa o cliente?",
+      "latestProposals": [],
+      "providerState": {
+        "lastResponseId": "resp_057b10a930dd63770169c43d040ab081968d710b71680a6791",
+        "lastRequestId": "req_0c79ce403adb41d1a557626c3bbbb93e",
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      },
+      "history": [
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T19:52:37.904Z"
+        },
+        {
+          "role": "assistant",
+          "content": "Hola, ¿en qué puedo asistirte hoy? ¿Tienes alguna consulta o tarea específica relacionada con la gestión operativa o cliente?",
+          "createdAt": "2026-03-25T19:52:41.490Z"
+        }
+      ]
+    },
+    {
+      "chatId": "chat_15",
+      "providerId": "openai",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "status": "failed",
+      "startedAt": "2026-03-25T19:52:51.222Z",
+      "updatedAt": "2026-03-25T19:53:04.136Z",
+      "sequenceNumber": 1,
+      "latestUserMessage": "Qué eres?",
+      "latestAssistantMessage": "",
+      "latestProposals": [],
+      "providerState": {
+        "lastResponseId": "resp_0710c69f16b64da30169c43d11812481968d71e288eb605134",
+        "lastRequestId": "req_c33c81f6d2564c64baece449534e9a9a",
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      },
+      "history": [
+        {
+          "role": "user",
+          "content": "Eres chat gpt?",
+          "createdAt": "2026-03-25T19:52:51.222Z"
+        },
+        {
+          "role": "assistant",
+          "content": "Sí, soy un asistente de inteligencia artificial basado en la tecnología GPT. ¿En qué puedo ayudarte hoy?",
+          "createdAt": "2026-03-25T19:52:56.550Z"
+        },
+        {
+          "role": "user",
+          "content": "Qué eres?",
+          "createdAt": "2026-03-25T19:53:03.804Z"
+        }
+      ],
+      "lastError": "400 Invalid value: 'input_text'. Supported values are: 'output_text' and 'refusal'."
+    },
+    {
+      "chatId": "chat_16",
+      "providerId": "openai",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "status": "completed",
+      "startedAt": "2026-03-25T20:32:22.074Z",
+      "updatedAt": "2026-03-25T20:32:26.815Z",
+      "sequenceNumber": 0,
+      "latestUserMessage": "Eres chat gpt o algo así?",
+      "latestAssistantMessage": "Sí, soy un asistente conversacional basado en la tecnología GPT, diseñado para ayudarte con diversas tareas. En este entorno específico, soy un asistente gobernado enfocado en la planificación y operaciones dentro de Opita Sync. ¿En qué puedo ayudarte hoy?",
+      "latestProposals": [],
+      "providerState": {
+        "lastResponseId": "resp_05fdd665d95d15090169c44654180881939d70ad9660516e9a",
+        "lastRequestId": "req_5cd6d328fa0a4097844fb31df4af4191",
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      },
+      "history": [
+        {
+          "role": "user",
+          "content": "Eres chat gpt o algo así?",
+          "createdAt": "2026-03-25T20:32:22.074Z"
+        },
+        {
+          "role": "assistant",
+          "content": "Sí, soy un asistente conversacional basado en la tecnología GPT, diseñado para ayudarte con diversas tareas. En este entorno específico, soy un asistente gobernado enfocado en la planificación y operaciones dentro de Opita Sync. ¿En qué puedo ayudarte hoy?",
+          "createdAt": "2026-03-25T20:32:26.815Z"
+        }
+      ]
+    },
+    {
+      "chatId": "chat_17",
+      "providerId": "openai",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "status": "failed",
+      "startedAt": "2026-03-25T20:32:52.170Z",
+      "updatedAt": "2026-03-25T20:33:55.565Z",
+      "sequenceNumber": 1,
+      "latestUserMessage": "Dame un ejemplo de las herramientas de gráficas que tienes para ver si funcionan, dame un despliegue de las herramientas de información que tienes para revisarlas.",
+      "latestAssistantMessage": "",
+      "latestProposals": [],
+      "providerState": {
+        "lastResponseId": "resp_01d0ab34a600f0890169c44671a318819590f5ed0fcdfdf939",
+        "lastRequestId": "req_051d8c7943a34da69d9f2260b9999edc",
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      },
+      "history": [
+        {
+          "role": "user",
+          "content": "Cuanto es 2 + 2?",
+          "createdAt": "2026-03-25T20:32:52.170Z"
+        },
+        {
+          "role": "assistant",
+          "content": "La respuesta a \"¿Cuánto es 2 + 2?\" es 4. No hay una acción gobernada relevante para esta consulta matemática. ¿Desea ayuda con algo más relacionado con la operación o un proceso específico?",
+          "createdAt": "2026-03-25T20:32:56.295Z"
+        },
+        {
+          "role": "user",
+          "content": "Dame un ejemplo de las herramientas de gráficas que tienes para ver si funcionan, dame un despliegue de las herramientas de información que tienes para revisarlas.",
+          "createdAt": "2026-03-25T20:33:54.834Z"
+        }
+      ],
+      "lastError": "400 Invalid value: 'input_text'. Supported values are: 'output_text' and 'refusal'."
+    },
+    {
+      "chatId": "chat_18",
+      "providerId": "openai",
+      "model": "gpt-4.1-mini-2025-04-14",
+      "status": "completed",
+      "startedAt": "2026-03-25T20:35:18.218Z",
+      "updatedAt": "2026-03-25T20:35:26.436Z",
+      "sequenceNumber": 0,
+      "latestUserMessage": "Dame un ejemplo de las herramientas de gr�ficas que tienes para ver si funcionan, dame un despliegue de las herramientas de informaci�n que tienes para revisarlas.",
+      "latestAssistantMessage": "El usuario solicita un ejemplo o despliegue de las herramientas de gráficas e información disponibles para revisión y prueba.\n\nActualmente, en el catálogo gobernado accesible no hay activos específicamente dedicados a herramientas de gráficas o despliegues visuales de información. Los activos disponibles se enfocan en la gestión y seguimiento de clientes (seguimiento y triaje).\n\nPor lo tanto, no puedo ofrecer un activo gobernado de ejemplo para herramientas de gráficas o despliegue de información.\n\n¿Puedo apoyar en alguna otra gestión o revisión relacionada?",
+      "latestProposals": [],
+      "providerState": {
+        "lastResponseId": "resp_096b54978929a5210169c4470421648197bd66b9d188e52205",
+        "lastRequestId": "req_e3ccb6723086470d9a505b6c2b655716",
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      },
+      "history": [
+        {
+          "role": "user",
+          "content": "Dame un ejemplo de las herramientas de gr�ficas que tienes para ver si funcionan, dame un despliegue de las herramientas de informaci�n que tienes para revisarlas.",
+          "createdAt": "2026-03-25T20:35:18.218Z"
+        },
+        {
+          "role": "assistant",
+          "content": "El usuario solicita un ejemplo o despliegue de las herramientas de gráficas e información disponibles para revisión y prueba.\n\nActualmente, en el catálogo gobernado accesible no hay activos específicamente dedicados a herramientas de gráficas o despliegues visuales de información. Los activos disponibles se enfocan en la gestión y seguimiento de clientes (seguimiento y triaje).\n\nPor lo tanto, no puedo ofrecer un activo gobernado de ejemplo para herramientas de gráficas o despliegue de información.\n\n¿Puedo apoyar en alguna otra gestión o revisión relacionada?",
+          "createdAt": "2026-03-25T20:35:26.436Z"
+        }
+      ]
+    },
+    {
+      "chatId": "chat_19",
+      "providerId": "openai",
+      "model": "gpt-5-mini",
+      "status": "failed",
+      "startedAt": "2026-03-25T21:05:43.699Z",
+      "updatedAt": "2026-03-25T21:05:43.888Z",
+      "sequenceNumber": 0,
+      "latestUserMessage": "qué eres?",
+      "latestAssistantMessage": "",
+      "latestProposals": [],
+      "providerState": {
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      },
+      "history": [
+        {
+          "role": "user",
+          "content": "qué eres?",
+          "createdAt": "2026-03-25T21:05:43.699Z"
+        }
+      ],
+      "lastError": "OpenAI provider not configured.",
+      "lastErrorCode": "provider_not_configured"
+    },
+    {
+      "chatId": "chat_20",
+      "providerId": "openai",
+      "model": "gpt-5-mini",
+      "status": "failed",
+      "startedAt": "2026-03-25T21:49:33.683Z",
+      "updatedAt": "2026-03-25T21:49:33.860Z",
+      "sequenceNumber": 0,
+      "latestUserMessage": "Hola",
+      "latestAssistantMessage": "",
+      "latestProposals": [],
+      "providerState": {
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      },
+      "history": [
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T21:49:33.683Z"
+        }
+      ],
+      "lastError": "OpenAI provider not configured.",
+      "lastErrorCode": "provider_not_configured"
+    },
+    {
+      "chatId": "chat_21",
+      "providerId": "openai",
+      "model": "gpt-5-mini",
+      "status": "failed",
+      "startedAt": "2026-03-25T21:55:00.982Z",
+      "updatedAt": "2026-03-25T21:55:01.137Z",
+      "sequenceNumber": 0,
+      "latestUserMessage": "Hola",
+      "latestAssistantMessage": "",
+      "latestProposals": [],
+      "providerState": {
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      },
+      "history": [
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T21:55:00.982Z"
+        }
+      ],
+      "lastError": "OpenAI provider not configured.",
+      "lastErrorCode": "provider_not_configured"
+    },
+    {
+      "chatId": "chat_22",
+      "providerId": "openai",
+      "model": "gpt-5-mini",
+      "status": "failed",
+      "startedAt": "2026-03-25T21:58:35.618Z",
+      "updatedAt": "2026-03-25T21:58:48.389Z",
+      "sequenceNumber": 1,
+      "latestUserMessage": "Hola",
+      "latestAssistantMessage": "",
+      "latestProposals": [],
+      "providerState": {
+        "storeEnabled": false,
+        "continuityMode": "manual"
+      },
+      "history": [
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T21:58:35.618Z"
+        },
+        {
+          "role": "user",
+          "content": "Hola",
+          "createdAt": "2026-03-25T21:58:48.273Z"
+        }
+      ],
+      "lastError": "OpenAI provider not configured.",
+      "lastErrorCode": "provider_not_configured"
+    }
+  ],
+  "localUsers": [
+    {
+      "userId": "user_test_tenant_admin",
+      "tenantId": "test-tenant",
+      "email": "test@test-tenant.local",
+      "displayName": "Test Tenant Admin",
+      "passwordSalt": "303ba72317eb28bd9dda59077140f79c",
+      "passwordHash": "8cbd980e9efba996b07aee09d3d8e50005079b6df260ba5c374992b09c4e4c5f96a396f7035ced48c7693b0ccd8e5de456eb5aac8d6606b1a811b817a3114278",
+      "active": true,
+      "roles": [
+        "tenant_admin",
+        "approver"
+      ]
+    }
+  ],
+  "localSessions": [
+    {
+      "sessionId": "b550b07ded9fa316fd6c42092f7ec4a07193a20bb04862ec",
+      "userId": "user_test_tenant_admin",
+      "tenantId": "test-tenant",
+      "createdAt": "2026-03-25T14:38:56.649Z",
+      "expiresAt": "2026-03-26T02:38:56.649Z",
+      "lastSeenAt": "2026-03-25T14:38:56.649Z"
+    },
+    {
+      "sessionId": "59204c77398333f8aa76336ca6033e61ca62e6fb70217183",
+      "userId": "user_test_tenant_admin",
+      "tenantId": "test-tenant",
+      "createdAt": "2026-03-25T15:25:25.735Z",
+      "expiresAt": "2026-03-26T03:25:25.735Z",
+      "lastSeenAt": "2026-03-25T15:25:25.735Z"
+    },
+    {
+      "sessionId": "edf59803ac6c63a29f0914be0969e3e05cdb7243607de73d",
+      "userId": "user_test_tenant_admin",
+      "tenantId": "test-tenant",
+      "createdAt": "2026-03-25T19:11:44.017Z",
+      "expiresAt": "2026-03-26T07:11:44.017Z",
+      "lastSeenAt": "2026-03-25T19:11:44.017Z"
+    },
+    {
+      "sessionId": "ee182d275c4aa812f88fd0d4e6d39c1c41132ebb42fe799c",
+      "userId": "user_test_tenant_admin",
+      "tenantId": "test-tenant",
+      "createdAt": "2026-03-25T19:16:25.351Z",
+      "expiresAt": "2026-03-26T07:16:25.351Z",
+      "lastSeenAt": "2026-03-25T19:16:25.351Z"
+    },
+    {
+      "sessionId": "a81dd071c4159438dc6ac782b4333544fff6404b9c6de73c",
+      "userId": "user_test_tenant_admin",
+      "tenantId": "test-tenant",
+      "createdAt": "2026-03-25T19:16:45.731Z",
+      "expiresAt": "2026-03-26T07:16:45.731Z",
+      "lastSeenAt": "2026-03-25T19:16:45.731Z"
+    },
+    {
+      "sessionId": "07e7230cac23720221eb95eb160cc409347975dae93f9e4e",
+      "userId": "user_test_tenant_admin",
+      "tenantId": "test-tenant",
+      "createdAt": "2026-03-25T19:16:56.893Z",
+      "expiresAt": "2026-03-26T07:16:56.893Z",
+      "lastSeenAt": "2026-03-25T19:16:56.893Z"
+    },
+    {
+      "sessionId": "2362eec9f6239f8d61640ac031564ad18fc53f68841ba6c0",
+      "userId": "user_test_tenant_admin",
+      "tenantId": "test-tenant",
+      "createdAt": "2026-03-25T19:40:48.308Z",
+      "expiresAt": "2026-03-26T07:40:48.308Z",
+      "lastSeenAt": "2026-03-25T19:40:48.308Z"
+    },
+    {
+      "sessionId": "124cc47266aef34bd0a56a9c62354474e6fc9c082715a8ce",
+      "userId": "user_test_tenant_admin",
+      "tenantId": "test-tenant",
+      "createdAt": "2026-03-25T19:42:25.216Z",
+      "expiresAt": "2026-03-26T07:42:25.216Z",
+      "lastSeenAt": "2026-03-25T19:42:25.216Z"
+    },
+    {
+      "sessionId": "d70ce6fea81b910c5a3b4f65e34791575131ef240bcb0ab2",
+      "userId": "user_test_tenant_admin",
+      "tenantId": "test-tenant",
+      "createdAt": "2026-03-25T20:35:17.861Z",
+      "expiresAt": "2026-03-26T08:35:17.861Z",
+      "lastSeenAt": "2026-03-25T20:35:17.861Z"
     }
   ],
   "settings": {
-    "tenantId": "tenant_1",
-    "tenantName": "Tenant 1",
-    "defaultEnvironment": "dev",
+    "tenantId": "test-tenant",
+    "tenantName": "test-tenant",
+    "defaultEnvironment": "prod",
     "preferredProvider": "OpenAI",
-    "connectorNotes": "High-trust connectors remain centrally governed."
+    "connectorNotes": "Minimal test tenant."
   }
 }

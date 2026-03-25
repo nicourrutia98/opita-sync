@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { usePathname } from 'next/navigation';
 
 function safeParse(input: string) {
   try {
@@ -14,8 +15,12 @@ function safeParse(input: string) {
 export function GlobalStreamBridge() {
   const queryClient = useQueryClient();
   const eventSourceRef = useRef<EventSource | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
+    if (pathname === '/login') {
+      return;
+    }
     const source = new EventSource('/api/events/stream');
     eventSourceRef.current = source;
 
@@ -39,7 +44,7 @@ export function GlobalStreamBridge() {
       source.close();
       eventSourceRef.current = null;
     };
-  }, [queryClient]);
+  }, [pathname, queryClient]);
 
   return null;
 }

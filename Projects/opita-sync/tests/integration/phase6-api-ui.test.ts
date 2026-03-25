@@ -1,10 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { areGovernanceAndSettingsSeparated, CANONICAL_NAVIGATION } from '../../apps/web/src/navigation.js';
+import * as navigationModule from '../../apps/web/src/navigation.js';
 import { CANONICAL_ROUTES, launchCatalogAssetIntoOperate } from '../../services/api/src/index.js';
 
 test('canonical navigation preserves separate Governance and Settings', () => {
+  const areGovernanceAndSettingsSeparated =
+    (navigationModule as { areGovernanceAndSettingsSeparated?: () => boolean; default?: { areGovernanceAndSettingsSeparated?: () => boolean } }).areGovernanceAndSettingsSeparated
+    ?? (navigationModule as { default?: { areGovernanceAndSettingsSeparated?: () => boolean } }).default?.areGovernanceAndSettingsSeparated;
+  const CANONICAL_NAVIGATION =
+    ((navigationModule as unknown as { CANONICAL_NAVIGATION?: ReadonlyArray<{ key: string }>; default?: { CANONICAL_NAVIGATION?: ReadonlyArray<{ key: string }> } }).CANONICAL_NAVIGATION)
+    ?? ((navigationModule as unknown as { default?: { CANONICAL_NAVIGATION?: ReadonlyArray<{ key: string }> } }).default?.CANONICAL_NAVIGATION);
+  assert.ok(areGovernanceAndSettingsSeparated);
+  assert.ok(CANONICAL_NAVIGATION);
   assert.equal(areGovernanceAndSettingsSeparated(), true);
   assert.deepEqual(CANONICAL_NAVIGATION.map((item) => item.key), ['operate', 'catalog', 'inbox', 'activity', 'governance', 'settings']);
 });

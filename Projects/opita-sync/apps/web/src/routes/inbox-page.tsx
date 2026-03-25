@@ -24,7 +24,7 @@ function PanelTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   );
 }
 
-export function InboxPage() {
+export function InboxPage(props: { auth?: { tenantName: string; userLabel: string } } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const [selected, setSelected] = useState<InboxItemSummary | null>(null);
@@ -59,6 +59,8 @@ export function InboxPage() {
       title="Inbox"
       subtitle="Queue de trabajo accionable. No es notificación pasiva; cada item exige una transición clara."
       summary={`${inboxQuery.data?.items.length ?? 0} pending`}
+      tenantName={props.auth?.tenantName}
+      userLabel={props.auth?.userLabel}
       pathname={pathname}
       onNavigate={(href) => router.push(href)}
       inspector={

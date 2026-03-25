@@ -10,6 +10,7 @@ export function useGlobalStateStream() {
 
   useEffect(() => subscribeToGlobalStream(() => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.viewModel });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.operateWorkspace });
     void queryClient.invalidateQueries({ queryKey: queryKeys.catalog });
     void queryClient.invalidateQueries({ queryKey: queryKeys.inbox });
     void queryClient.invalidateQueries({ queryKey: queryKeys.activity });
@@ -26,6 +27,7 @@ export function useRunStream(runId?: string | null) {
     return subscribeToRunStream(runId, () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.run(runId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.viewModel });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.operateWorkspace });
       void queryClient.invalidateQueries({ queryKey: queryKeys.activity });
       void queryClient.invalidateQueries({ queryKey: queryKeys.inbox });
     });

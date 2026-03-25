@@ -24,7 +24,7 @@ function PanelTitle({ title, subtitle }: { title: string; subtitle?: string }) {
 
 const columnHelper = createColumnHelper<CatalogItemSummary>();
 
-export function CatalogPage() {
+export function CatalogPage(props: { auth?: { tenantName: string; userLabel: string } } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const [search, setSearch] = useState('');
@@ -90,6 +90,8 @@ export function CatalogPage() {
       title="Catalog"
       subtitle="Inventario aprobado de acciones y workflows. La publicación y el riesgo siguen visibles antes del lanzamiento a Operate."
       summary={`${filtered.length} assets`}
+      tenantName={props.auth?.tenantName}
+      userLabel={props.auth?.userLabel}
       pathname={pathname}
       onNavigate={(href) => router.push(href)}
       inspector={

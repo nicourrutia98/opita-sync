@@ -10,6 +10,7 @@ import { projectInboxItems } from '../../../packages/inbox/src/index.js';
 import type { ApprovalMode } from '../../../packages/contracts/src/index.js';
 import type { ClassificationLevel, RoleAssignment } from '../../../packages/domain/src/index.js';
 import type { ApiState, RunRecord } from './state-types.js';
+import { createGovernedAnalysisResult, detectAnalysisIntent } from './analysis-service.js';
 
 export interface StartRunInput {
   rawIntent: string;
@@ -109,11 +110,24 @@ function createOutputArtifact(runId: string): OutputArtifact {
   };
 }
 
+function selectRequestedAssetId(state: ApiState, input: StartRunInput): string | undefined {
+  if (input.requestedActionAssetId) {
+    return input.requestedActionAssetId;
+  }
+
+  const analysisIntent = detectAnalysisIntent(input.rawIntent);
+  if (analysisIntent.wantsAnalysis) {
+    return analysisIntent.analysisMode === 'visualize' ? 'action_chart_visualization' : 'action_dataset_summary';
+  }
+
+  return state.catalog[0]?.assetId;
+}
+
 export function startRun(state: ApiState, input: StartRunInput): RunRecord {
   const tenantId = input.tenantId ?? 'tenant_1';
   const environment = input.environment ?? 'dev';
   const initiatorUserId = input.initiatorUserId ?? 'user_1';
-  const requestedActionAssetId = input.requestedActionAssetId ?? state.catalog[0]?.assetId;
+  const requestedActionAssetId = selectRequestedAssetId(state, input);
   if (!requestedActionAssetId) {
     throw new Error('catalog_empty');
   }
@@ -131,6 +145,7 @@ export function startRun(state: ApiState, input: StartRunInput): RunRecord {
   const asset = state.catalog.find((item) => item.assetId === requestedActionAssetId);
   const approvalMode = input.approvalMode ?? asset?.approvalMode ?? 'pre-application';
   const externalSend = input.externalSend ?? false;
+  const analysisIntent = detectAnalysisIntent(input.rawIntent);
 
   const contract = buildContractFromNormalizedIntent({
     rawIntent: input.rawIntent,
@@ -145,13 +160,18 @@ export function startRun(state: ApiState, input: StartRunInput): RunRecord {
     normalized
   });
 
-  contract.allowedDataDomains = ['customer'];
+  contract.allowedDataDomains = analysisIntent.wantsAnalysis ? ['customer', 'analytics'] : ['customer'];
+  contract.targetDatasetRefs = analysisIntent.wantsAnalysis ? ['dataset:revenue_by_region:v1'] : undefined;
+  contract.requestedAnalysisMode = analysisIntent.wantsAnalysis ? analysisIntent.analysisMode : undefined;
+  contract.requestedChartFamily = analysisIntent.chartFamily;
   contract.allowedConnectorIds = asset ? [...asset.connectorIds] : [];
   contract.allowedCredentialScopeIds = asset ? asset.connectorIds.map((connectorId) => `cred:${connectorId}`) : [];
   contract.approvalExpectationMode = approvalMode;
   contract.allowedExternalEffectClass = externalSend ? 'external_send' : 'draft_only';
   contract.sendRequested = externalSend;
   contract.draftOnly = !externalSend;
+  contract.desiredOutputForm = analysisIntent.analysisMode === 'visualize' ? 'chart_and_table' : analysisIntent.wantsAnalysis ? 'analytical_summary' : contract.desiredOutputForm;
+  contract.domainContext = analysisIntent.wantsAnalysis ? 'governed_analysis' : contract.domainContext;
 
   const effectiveAuthority = computeEffectiveAuthority({
     subjectUserId: initiatorUserId,
@@ -275,6 +295,7 @@ export function startRun(state: ApiState, input: StartRunInput): RunRecord {
     },
     approvalCase,
     releaseDecision: undefined,
+    analysisResult: analysisIntent.wantsAnalysis ? createGovernedAnalysisResult(input.rawIntent) : undefined,
     inboxItems: projectInboxItems({ run: { ...executionResult.run, runId }, approvalCase }),
     runtimeEvents
   };

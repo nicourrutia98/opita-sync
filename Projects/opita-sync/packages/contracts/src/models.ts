@@ -1,6 +1,8 @@
 import type { Environment } from '../../domain/src/index.js';
 
 export type ApprovalMode = 'auto' | 'pre-execution' | 'pre-application' | 'double_approval';
+export type AllowedFinalAction = 'draft_only' | 'apply_capable' | 'send_capable';
+export type RequestedAnalysisMode = 'inspect' | 'summarize' | 'aggregate' | 'visualize';
 
 export type ContractStatus =
   | 'draft'
@@ -43,6 +45,9 @@ export interface ExecutionContract {
   allowedExternalEffectClass: 'none' | 'draft_only' | 'internal_apply' | 'external_send';
   requestedActionAssetId?: string;
   requestedWorkflowAssetId?: string;
+  targetDatasetRefs?: string[];
+  requestedAnalysisMode?: RequestedAnalysisMode;
+  requestedChartFamily?: string;
   candidateActionFamily?: string;
   candidateWorkflowFamily?: string;
   dynamicCompositionRequested: boolean;
@@ -86,4 +91,16 @@ export interface AdmissibilityRequestEnvelope {
   requestedEnvironment: Environment;
   requestedAssetRefs: string[];
   requestedConnectorRefs: string[];
+}
+
+export interface EffectiveContractSummary {
+  objective: string;
+  scopeSummary: string;
+  allowedDataDomains: string[];
+  allowedConnectorIds: string[];
+  delegationApplied: boolean;
+  approvalMode: ApprovalMode;
+  allowedFinalAction: AllowedFinalAction;
+  releaseState: string;
+  runState: string;
 }

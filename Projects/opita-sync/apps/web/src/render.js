@@ -1,1 +1,1 @@
-export * from './render.tsx';
+export { renderWebAppHtml } from './render.tsx';

@@ -23,7 +23,7 @@ function PanelTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   );
 }
 
-export function GovernancePage() {
+export function GovernancePage(props: { auth?: { tenantName: string; userLabel: string } } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
@@ -56,6 +56,8 @@ export function GovernancePage() {
       title="Governance"
       subtitle="Autoridad, policy, classification y publication lifecycle permanecen separados de Settings."
       summary={governance?.status ?? 'not_loaded'}
+      tenantName={props.auth?.tenantName}
+      userLabel={props.auth?.userLabel}
       pathname={pathname}
       onNavigate={(href) => router.push(href)}
       inspector={

@@ -1,10 +1,12 @@
 import { Suspense } from 'react';
-import { GovernancePage } from '../../src/routes/governance-page.js';
+import { requireServerAuth } from '../../src/lib/auth-server';
+import { GovernancePage } from '../../src/routes/governance-page';
 
-export default function Page() {
+export default async function Page() {
+  const auth = await requireServerAuth('/governance');
   return (
     <Suspense fallback={null}>
-      <GovernancePage />
+      <GovernancePage auth={{ tenantName: auth.user.tenantId, userLabel: auth.user.displayName }} />
     </Suspense>
   );
 }

@@ -21,7 +21,7 @@ function PanelTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   );
 }
 
-export function SettingsPage() {
+export function SettingsPage(props: { auth?: { tenantName: string; userLabel: string } } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
@@ -67,6 +67,8 @@ export function SettingsPage() {
       title="Settings"
       subtitle="Solo plumbing y configuración técnica/tenant. No debe convertirse en consola de autoridad."
       summary={backend?.tenantId ?? 'not_loaded'}
+      tenantName={props.auth?.tenantName}
+      userLabel={props.auth?.userLabel}
       pathname={pathname}
       onNavigate={(href) => router.push(href)}
       inspector={
@@ -129,6 +131,30 @@ export function SettingsPage() {
           <MetricCard label="Connectors" value={`${backend?.connectors.length ?? 0}`} helper="Governed connector inventory." />
           <MetricCard label="Environments" value={`${backend?.environments.length ?? 0}`} helper="Tenant environments enabled." />
         </div>
+
+        <Card>
+          <CardHeader>
+            <PanelTitle title="OpenAI provider status" subtitle="Backend-only env plumbing. The API key never persists in Settings." />
+          </CardHeader>
+          <CardContent>
+            {backend?.providerStatus ? (
+              <div style={{ display: 'grid', gap: 12 }}>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <Badge tone={backend.providerStatus.configured ? 'success' : 'warning'}>
+                    {backend.providerStatus.configured ? 'configured' : 'missing'}
+                  </Badge>
+                  <Badge tone="muted">{backend.providerStatus.source}</Badge>
+                  <Badge tone="brand">{backend.providerStatus.defaultModel}</Badge>
+                </div>
+                <div style={{ color: 'var(--muted)', fontSize: 13, lineHeight: 1.55 }}>
+                  Capabilities: {backend.providerStatus.capabilities.join(', ')}
+                </div>
+              </div>
+            ) : (
+              <StateBlock tone="empty" title="No provider status" description="Backend did not expose provider configuration status." />
+            )}
+          </CardContent>
+        </Card>
 
         {savedMessage && <StateBlock tone="success" title="Saved locally" description={savedMessage} />}
 

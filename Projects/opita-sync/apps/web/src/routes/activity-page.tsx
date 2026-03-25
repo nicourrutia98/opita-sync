@@ -44,7 +44,7 @@ function Timeline({ run }: { run?: RunDetailResponse }) {
   );
 }
 
-export function ActivityPage() {
+export function ActivityPage(props: { auth?: { tenantName: string; userLabel: string } } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -92,6 +92,8 @@ export function ActivityPage() {
       title="Activity"
       subtitle="Historial operativo y audit trail. Aquí se ve el recorrido real, no métricas de vanidad."
       summary={`${activityQuery.data?.items.length ?? 0} runs`}
+      tenantName={props.auth?.tenantName}
+      userLabel={props.auth?.userLabel}
       pathname={pathname}
       onNavigate={(href) => router.push(href)}
       inspector={

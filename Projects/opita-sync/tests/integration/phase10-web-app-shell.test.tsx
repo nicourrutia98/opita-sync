@@ -2,10 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { getWebAppViewModel } from '../../services/api/src/mock-web-app.js';
-import { renderWebAppHtml } from '../../apps/web/src/render.js';
+import * as renderModule from '../../apps/web/src/render.js';
 
 test('web app shell renders all canonical modules and governed signals', () => {
   const model = getWebAppViewModel();
+  const renderWebAppHtml = (renderModule as { renderWebAppHtml?: () => string; default?: { renderWebAppHtml?: () => string } }).renderWebAppHtml
+    ?? (renderModule as { default?: { renderWebAppHtml?: () => string } }).default?.renderWebAppHtml;
+  assert.ok(renderWebAppHtml);
   const html = renderWebAppHtml();
 
   assert.equal(model.operate.contractStatus, 'approval_required');

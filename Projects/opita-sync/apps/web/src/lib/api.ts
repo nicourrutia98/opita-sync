@@ -1,11 +1,15 @@
 import { z } from 'zod';
 import type {
   ActivityItemSummary,
+  AuthSessionResponse,
   CatalogItemSummary,
+  ChatSessionResponse,
   CommandRunResponse,
   CommandSettingsResponse,
   GovernanceSummary,
   InboxItemSummary,
+  OperateThreadPageResponse,
+  OperateWorkspaceResponse,
   RunDetailResponse,
   RunListResponse,
   SettingsSummary,
@@ -32,8 +36,40 @@ export function fetchHealth() {
   return readJson<{ ok: true; statePath: string }>('/health');
 }
 
+export function fetchAuthSession() {
+  return readJson<AuthSessionResponse>('/api/auth/session');
+}
+
+export function login(payload: { email: string; password: string }) {
+  return readJson<AuthSessionResponse>('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export function logout() {
+  return readJson<{ ok: true }>('/api/auth/logout', {
+    method: 'POST',
+    body: JSON.stringify({})
+  });
+}
+
 export function fetchViewModel() {
   return readJson<ViewModelResponse>('/api/view-model');
+}
+
+export function fetchOperateWorkspace(runId?: string | null) {
+  const query = runId ? `?runId=${encodeURIComponent(runId)}` : '';
+  return readJson<OperateWorkspaceResponse>(`/api/operate/workspace${query}`);
+}
+
+export function fetchOperateThreadPage(payload?: { runId?: string | null; before?: string | null; limit?: number }) {
+  const query = new URLSearchParams();
+  if (payload?.runId) query.set('runId', payload.runId);
+  if (payload?.before) query.set('before', payload.before);
+  if (payload?.limit) query.set('limit', String(payload.limit));
+  const suffix = query.size ? `?${query.toString()}` : '';
+  return readJson<OperateThreadPageResponse>(`/api/operate/thread${suffix}`);
 }
 
 export function fetchCatalog() {
@@ -108,6 +144,24 @@ export function approvePreExecution(runId: string) {
   });
 }
 
+export function startChat(payload: { message: string; chatId?: string }) {
+  return readJson<ChatSessionResponse>('/api/chat/start', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export function fetchChat(chatId: string) {
+  return readJson<ChatSessionResponse>(`/api/chat/${chatId}`);
+}
+
+export function stopChat(chatId: string) {
+  return readJson<ChatSessionResponse>(`/api/chat/${chatId}/stop`, {
+    method: 'POST',
+    body: JSON.stringify({})
+  });
+}
+
 const streamPayloadSchema = z.object({
   kind: z.string(),
   runId: z.string().optional(),
@@ -128,6 +182,37 @@ export function subscribeToRunStream(runId: string, onMessage: () => void) {
   const handler = () => onMessage();
   source.addEventListener('snapshot', handler);
   source.onmessage = handler;
+  source.onerror = () => undefined;
+  return () => source.close();
+}
+
+export function subscribeToChatStream(
+  chatId: string,
+  handlers: {
+    onStarted?: (payload: Record<string, unknown>) => void;
+    onDelta?: (payload: Record<string, unknown>) => void;
+    onToolProposals?: (payload: Record<string, unknown>) => void;
+    onCompleted?: (payload: Record<string, unknown>) => void;
+    onCancelled?: (payload: Record<string, unknown>) => void;
+    onError?: (payload: Record<string, unknown>) => void;
+  }
+) {
+  const source = new EventSource(`/api/chat/${chatId}/stream`);
+
+  const bind = (eventName: string, handler?: (payload: Record<string, unknown>) => void) => {
+    if (!handler) return;
+    source.addEventListener(eventName, (event) => {
+      const parsed = JSON.parse((event as MessageEvent).data) as Record<string, unknown>;
+      handler(parsed);
+    });
+  };
+
+  bind('chat.started', handlers.onStarted);
+  bind('chat.delta', handlers.onDelta);
+  bind('chat.tool_proposals', handlers.onToolProposals);
+  bind('chat.completed', handlers.onCompleted);
+  bind('chat.cancelled', handlers.onCancelled);
+  bind('chat.error', handlers.onError);
   source.onerror = () => undefined;
   return () => source.close();
 }
