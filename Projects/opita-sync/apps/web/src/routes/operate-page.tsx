@@ -21,9 +21,10 @@ import {
   StateBlock,
   Textarea
 } from '../../../../packages/ui-core/src/primitives.js';
-import { approvePreExecution, approveRelease, fetchRun, fetchViewModel, releaseCheck, startRun } from '../lib/api.js';
+import { approvePreExecution, approveRelease, fetchActivity, fetchRun, fetchViewModel, releaseCheck, startRun } from '../lib/api.js';
 import { queryKeys } from '../lib/query-keys.js';
 import { runComposerSchema, type RunComposerValues } from '../lib/schemas.js';
+import type { RunDetailResponse } from '../lib/types.js';
 import { useRunStream } from '../lib/use-stream.js';
 
 function FieldLabel({ children }: { children: ReactNode }) {
@@ -73,6 +74,11 @@ export function OperatePage() {
   const viewModelQuery = useQuery({
     queryKey: queryKeys.viewModel,
     queryFn: fetchViewModel
+  });
+
+  const activityQuery = useQuery({
+    queryKey: queryKeys.activity,
+    queryFn: fetchActivity
   });
 
   const selectedAsset = useMemo(
@@ -155,6 +161,7 @@ export function OperatePage() {
 
   const run = runQuery.data;
   const summary = run?.runState ?? viewModelQuery.data?.operate.contractStatus ?? 'idle';
+  const recentRuns: RunDetailResponse[] = activityQuery.data?.items ?? [];
 
   return (
     <AppShellLayout
@@ -166,6 +173,54 @@ export function OperatePage() {
       onNavigate={(href) => router.push(href)}
       inspector={
         <div style={{ display: 'grid', gap: 16 }}>
+          <Card>
+            <CardContent>
+              <div style={{ display: 'grid', gap: 10 }}>
+                <PanelTitle title="Acciones rápidas" subtitle="Navega el contexto sin salir de Operate." />
+                <Separator />
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={async () => {
+                      if (run?.runId) {
+                        await navigator.clipboard.writeText(run.runId);
+                        setStatusNote(`Copied ${run.runId} to clipboard.`);
+                      }
+                    }}
+                    disabled={!run?.runId}
+                  >
+                    Copy run id
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      if (run?.runId) router.push(`/activity?runId=${encodeURIComponent(run.runId)}`);
+                    }}
+                    disabled={!run?.runId}
+                  >
+                    Open in Activity
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      void queryClient.invalidateQueries({ queryKey: queryKeys.viewModel });
+                      if (run?.runId) void queryClient.invalidateQueries({ queryKey: queryKeys.run(run.runId) });
+                      setStatusNote('Refreshed governed view model.');
+                    }}
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <RefreshCw size={14} />
+                      Refresh
+                    </span>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardContent>
               <div style={{ display: 'grid', gap: 10 }}>
@@ -191,6 +246,38 @@ export function OperatePage() {
                   <div>Tenant: tenant_1</div>
                   <div>Environment: dev</div>
                   <div>Classification ceiling: confidential</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent>
+              <div style={{ display: 'grid', gap: 10 }}>
+                <PanelTitle title="Recent runs" subtitle="Tap into prior executions directly from the workspace." />
+                <Separator />
+                <div style={{ display: 'grid', gap: 8, maxHeight: 280, overflow: 'auto' }}>
+                  {recentRuns.slice(0, 5).map((item) => (
+                    <button
+                      key={item.runId}
+                      type="button"
+                      onClick={() => router.push(`/operate?runId=${encodeURIComponent(item.runId)}`)}
+                      style={{
+                        display: 'grid',
+                        gap: 4,
+                        textAlign: 'left',
+                        padding: 12,
+                        borderRadius: 16,
+                        border: `1px solid ${item.runId === run?.runId ? 'var(--brand)' : 'var(--line)'}`,
+                        background: item.runId === run?.runId ? 'var(--brand-soft)' : 'var(--surface)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <strong style={{ fontSize: 13 }}>{item.objective}</strong>
+                        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{item.runId} · {item.runState} · {item.releaseDecision}</span>
+                      </button>
+                  ))}
+                  {!recentRuns.length && <StateBlock tone="empty" title="No recent runs" description="Create or release a run to populate quick access." />}
                 </div>
               </div>
             </CardContent>
@@ -222,6 +309,26 @@ export function OperatePage() {
                   <FieldLabel>Intención</FieldLabel>
                   <Textarea rows={5} {...form.register('rawIntent')} />
                   {form.formState.errors.rawIntent && <div style={{ color: 'var(--danger)', fontSize: 12 }}>{form.formState.errors.rawIntent.message}</div>}
+                </div>
+
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <FieldLabel>Asset quick switch</FieldLabel>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {(viewModelQuery.data?.catalog ?? []).map((item) => (
+                      <Button
+                        key={item.assetId}
+                        type="button"
+                        size="sm"
+                        variant={item.assetId === selectedAsset?.assetId ? 'primary' : 'secondary'}
+                        onClick={() => {
+                          const nextUrl = `/operate?assetId=${encodeURIComponent(item.assetId)}${runId ? `&runId=${encodeURIComponent(runId)}` : ''}`;
+                          router.replace(nextUrl);
+                        }}
+                      >
+                        {item.name}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
@@ -331,13 +438,18 @@ export function OperatePage() {
                 {run?.planSteps.length ? (
                   <div style={{ display: 'grid', gap: 10 }}>
                     {run.planSteps.map((step, index) => (
-                      <div key={step.stepId} style={{ display: 'grid', gridTemplateColumns: '32px minmax(0,1fr)', gap: 12, alignItems: 'start', padding: 12, border: '1px solid var(--line)', borderRadius: 18 }}>
+                      <button
+                        key={step.stepId}
+                        type="button"
+                        onClick={() => setStatusNote(`Focused on ${step.stepId} (${step.assetRef}).`)}
+                        style={{ display: 'grid', gridTemplateColumns: '32px minmax(0,1fr)', gap: 12, alignItems: 'start', padding: 12, border: '1px solid var(--line)', borderRadius: 18, textAlign: 'left', cursor: 'pointer', background: 'var(--surface)' }}
+                      >
                         <div style={{ width: 32, height: 32, borderRadius: 999, background: 'var(--brand-soft)', color: 'var(--brand-strong)', display: 'grid', placeItems: 'center', fontWeight: 700 }}>{index + 1}</div>
                         <div style={{ display: 'grid', gap: 4 }}>
                           <strong>{step.stepId}</strong>
                           <span style={{ color: 'var(--muted)', fontSize: 13 }}>{step.assetRef}</span>
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 ) : (
