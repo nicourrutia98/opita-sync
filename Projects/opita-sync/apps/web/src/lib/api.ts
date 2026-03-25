@@ -3,6 +3,7 @@ import type {
   ActivityItemSummary,
   CatalogItemSummary,
   CommandRunResponse,
+  CommandSettingsResponse,
   GovernanceSummary,
   InboxItemSummary,
   RunDetailResponse,
@@ -53,6 +54,19 @@ export function fetchGovernance() {
 
 export function fetchSettings() {
   return readJson<SettingsSummary>('/api/settings');
+}
+
+export function updateSettings(payload: {
+  tenantId: string;
+  tenantName: string;
+  defaultEnvironment: 'dev' | 'staging' | 'prod';
+  preferredProvider: string;
+  connectorNotes: string;
+}) {
+  return readJson<CommandSettingsResponse>('/api/settings', {
+    method: 'PATCH',
+    body: JSON.stringify(payload)
+  });
 }
 
 export function fetchRun(runId: string) {

@@ -228,6 +228,41 @@ export async function startApiServer(options: StartOptions = {}) {
         return;
       }
 
+      if (method === 'PATCH' && url.pathname === '/api/settings') {
+        const body = await readBody(req) as Partial<{
+          tenantId: string;
+          tenantName: string;
+          defaultEnvironment: 'dev' | 'staging' | 'prod';
+          preferredProvider: string;
+          connectorNotes: string;
+        }>;
+
+        const { result } = await withStateMutation((state) => {
+          state.settings = {
+            ...state.settings,
+            ...(body.tenantId ? { tenantId: body.tenantId } : {}),
+            ...(body.tenantName ? { tenantName: body.tenantName } : {}),
+            ...(body.defaultEnvironment ? { defaultEnvironment: body.defaultEnvironment } : {}),
+            ...(body.preferredProvider ? { preferredProvider: body.preferredProvider } : {}),
+            ...(typeof body.connectorNotes === 'string' ? { connectorNotes: body.connectorNotes } : {})
+          };
+          return projectSettingsViewModel(state);
+        }, statePath);
+
+        const updatedState = await loadState(statePath);
+        broadcast(globalStreams, 'snapshot', {
+          kind: 'view-model',
+          updatedAt: updatedState.updatedAt,
+          viewModel: projectWebAppViewModel(updatedState)
+        });
+
+        json(res, 200, {
+          ok: true,
+          settings: result
+        });
+        return;
+      }
+
       if (method === 'GET' && url.pathname === '/api/runs') {
         const state = await loadState(statePath);
         json(res, 200, projectRunListViewModel(state));

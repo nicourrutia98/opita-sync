@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-03-25T11:26:23.825Z",
+  "updatedAt": "2026-03-25T11:46:07.397Z",
   "policySet": {
     "policySetId": "policy_default_tenant_1",
     "version": "1.0.0",
@@ -497,5 +497,12 @@
         }
       ]
     }
-  ]
+  ],
+  "settings": {
+    "tenantId": "tenant_1",
+    "tenantName": "Tenant 1",
+    "defaultEnvironment": "dev",
+    "preferredProvider": "OpenAI",
+    "connectorNotes": "High-trust connectors remain centrally governed."
+  }
 }

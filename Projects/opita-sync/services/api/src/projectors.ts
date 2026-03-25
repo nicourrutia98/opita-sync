@@ -129,8 +129,11 @@ export function projectWebAppViewModel(state: ApiState): WebAppViewModel {
       activeProviders: ['OpenAI', 'Anthropic', 'Gemini'],
       environments: ['dev', 'staging', 'prod'],
       governedConnectors: [...new Set(state.catalog.flatMap((asset) => asset.connectorIds))],
-      tenantId: 'tenant_1',
-      tenantName: 'Tenant 1',
+      tenantId: state.settings.tenantId,
+      tenantName: state.settings.tenantName,
+      defaultEnvironment: state.settings.defaultEnvironment,
+      preferredProvider: state.settings.preferredProvider,
+      connectorNotes: state.settings.connectorNotes,
       connectors: [...new Set(state.catalog.flatMap((asset) => asset.connectorIds))].map((connectorId) => ({
         connectorId,
         name: connectorId.replace('connector_', '').replace(/_/g, ' ').replace(/\b\w/g, (value) => value.toUpperCase()),
@@ -256,8 +259,11 @@ export function projectSettingsViewModel(state: ApiState): SettingsSummary {
   }));
 
   return {
-    tenantId: 'tenant_1',
-    tenantName: 'Tenant 1',
+    tenantId: state.settings.tenantId,
+    tenantName: state.settings.tenantName,
+    defaultEnvironment: state.settings.defaultEnvironment,
+    preferredProvider: state.settings.preferredProvider,
+    connectorNotes: state.settings.connectorNotes,
     environments: ['dev', 'staging', 'prod'],
     activeProviders: ['OpenAI', 'Anthropic', 'Gemini'],
     connectors,

@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react';
-import { useMemo } from 'react';
+import { forwardRef, useMemo } from 'react';
 import { getThemeTokens, type ThemeMode, type Tone, useTheme } from './theme.js';
 
 export function cn(...parts: Array<string | false | null | undefined>) {
@@ -144,10 +144,11 @@ export function Button(props: ButtonHTMLAttributes<HTMLButtonElement> & { varian
   );
 }
 
-export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(props, ref) {
   const { tokens } = useTheme();
   return (
     <input
+      ref={ref}
       {...props}
       style={{
         height: 44,
@@ -162,12 +163,13 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
       }}
     />
   );
-}
+});
 
-export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea(props, ref) {
   const { tokens } = useTheme();
   return (
     <textarea
+      ref={ref}
       {...props}
       style={{
         minHeight: 120,
@@ -182,7 +184,7 @@ export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
       }}
     />
   );
-}
+});
 
 export function Separator(props: { vertical?: boolean }) {
   const { tokens } = useTheme();

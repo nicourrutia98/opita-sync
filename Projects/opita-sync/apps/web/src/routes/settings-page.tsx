@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { usePathname, useRouter } from 'next/navigation';
 import { AppShellLayout } from '../../../../packages/ui-opita/src/shell.js';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, MetricCard, StateBlock, Textarea } from '../../../../packages/ui-core/src/primitives.js';
-import { fetchSettings } from '../lib/api.js';
+import { fetchSettings, updateSettings } from '../lib/api.js';
 import { queryKeys } from '../lib/query-keys.js';
 import { settingsSchema, type SettingsFormValues } from '../lib/schemas.js';
 
@@ -20,22 +20,10 @@ function PanelTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   );
 }
 
-const STORAGE_KEY = 'opita-settings-form';
-
-function loadLocalValues(defaults: SettingsFormValues): SettingsFormValues {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaults;
-    const parsed = JSON.parse(raw) as Partial<SettingsFormValues>;
-    return { ...defaults, ...parsed } as SettingsFormValues;
-  } catch {
-    return defaults;
-  }
-}
-
 export function SettingsPage() {
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const settingsQuery = useQuery({
     queryKey: queryKeys.settings,
     queryFn: fetchSettings
@@ -46,9 +34,9 @@ export function SettingsPage() {
     () => ({
       tenantId: backend?.tenantId ?? 'tenant_1',
       tenantName: backend?.tenantName ?? 'Tenant 1',
-      defaultEnvironment: backend?.environments[0] ?? 'dev',
-      preferredProvider: backend?.activeProviders[0] ?? 'OpenAI',
-      connectorNotes: 'High-trust connectors remain centrally governed.'
+      defaultEnvironment: backend?.defaultEnvironment ?? backend?.environments[0] ?? 'dev',
+      preferredProvider: backend?.preferredProvider ?? backend?.activeProviders[0] ?? 'OpenAI',
+      connectorNotes: backend?.connectorNotes ?? 'High-trust connectors remain centrally governed.'
     }),
     [backend]
   );
@@ -59,12 +47,18 @@ export function SettingsPage() {
   });
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      form.reset(loadLocalValues(defaults));
-    }
+    form.reset(defaults);
   }, [defaults, form]);
 
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const saveMutation = useMutation({
+    mutationFn: updateSettings,
+    onSuccess: async (result) => {
+      setSavedMessage(`Saved preferences for ${result.settings.tenantName} (${result.settings.defaultEnvironment}).`);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.viewModel });
+    }
+  });
 
   return (
     <AppShellLayout
@@ -113,15 +107,12 @@ export function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <PanelTitle title="Tenant plumbing" subtitle="Persisted locally for v1 until backend settings persistence lands." />
+            <PanelTitle title="Tenant plumbing" subtitle="Persisted via the backend settings surface." />
           </CardHeader>
           <CardContent>
             <form
               style={{ display: 'grid', gap: 14 }}
-              onSubmit={form.handleSubmit((values) => {
-                window.localStorage.setItem(STORAGE_KEY, JSON.stringify(values));
-                setSavedMessage(`Saved preferences for ${values.tenantName} (${values.defaultEnvironment}).`);
-              })}
+              onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}
             >
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
                 <div style={{ display: 'grid', gap: 8 }}>
@@ -161,7 +152,9 @@ export function SettingsPage() {
               </div>
 
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <Button type="submit">Save local settings</Button>
+                <Button type="submit" disabled={saveMutation.isPending}>
+                  {saveMutation.isPending ? 'Saving…' : 'Save settings'}
+                </Button>
                 <Button
                   type="button"
                   variant="secondary"

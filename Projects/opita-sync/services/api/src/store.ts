@@ -12,14 +12,32 @@ function createDefaultState(): ApiState {
     updatedAt: new Date().toISOString(),
     policySet: seedPolicySet,
     catalog: seedCatalog,
-    runRecords: []
+    runRecords: [],
+    settings: {
+      tenantId: 'tenant_1',
+      tenantName: 'Tenant 1',
+      defaultEnvironment: 'dev',
+      preferredProvider: 'OpenAI',
+      connectorNotes: 'High-trust connectors remain centrally governed.'
+    }
+  };
+}
+
+function normalizeState(state: ApiState): ApiState {
+  return {
+    ...createDefaultState(),
+    ...state,
+    settings: {
+      ...createDefaultState().settings,
+      ...(state.settings ?? {})
+    }
   };
 }
 
 export async function loadState(statePath = DEFAULT_STATE_PATH): Promise<ApiState> {
   try {
     const raw = await readFile(statePath, 'utf8');
-    return JSON.parse(raw) as ApiState;
+    return normalizeState(JSON.parse(raw) as ApiState);
   } catch {
     const initial = createDefaultState();
     await saveState(initial, statePath);

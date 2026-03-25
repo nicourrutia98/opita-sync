@@ -72,6 +72,9 @@ export interface GovernanceSummary {
 export interface SettingsSummary {
   tenantId: string;
   tenantName: string;
+  defaultEnvironment: 'dev' | 'staging' | 'prod';
+  preferredProvider: string;
+  connectorNotes: string;
   environments: Array<'dev' | 'staging' | 'prod'>;
   activeProviders: string[];
   connectors: Array<{ connectorId: string; name: string; owner: string; status: string }>;
@@ -124,4 +127,9 @@ export interface CommandRunResponse {
   approvalState: string | null;
   releaseDecision: string | null;
   reasons?: string[];
+}
+
+export interface CommandSettingsResponse {
+  ok: true;
+  settings: SettingsSummary;
 }

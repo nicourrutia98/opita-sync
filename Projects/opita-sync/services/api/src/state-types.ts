@@ -28,4 +28,11 @@ export interface ApiState {
   policySet: PolicySet;
   catalog: CatalogAsset[];
   runRecords: RunRecord[];
+  settings: {
+    tenantId: string;
+    tenantName: string;
+    defaultEnvironment: 'dev' | 'staging' | 'prod';
+    preferredProvider: string;
+    connectorNotes: string;
+  };
 }

@@ -23,6 +23,15 @@ export function getWebAppViewModel(): WebAppViewModel {
       { runId: 'run_ui_0', state: 'released', summary: 'Low-risk internal draft released successfully.' }
     ],
     governance: { activePolicies: ['deny by default', 'most restrictive wins', 'pre-application approval for send'], classificationScheme: 'enterprise-default-v1', publicationControls: ['dev->staging promotion required', 'prod publication locked to superadmin'] },
-    settings: { activeProviders: ['OpenAI', 'Anthropic', 'Gemini'], environments: ['dev', 'staging', 'prod'], governedConnectors: ['Email', 'CRM'] }
+    settings: {
+      activeProviders: ['OpenAI', 'Anthropic', 'Gemini'],
+      environments: ['dev', 'staging', 'prod'],
+      governedConnectors: ['Email', 'CRM'],
+      tenantId: 'tenant_1',
+      tenantName: 'Tenant 1',
+      defaultEnvironment: 'dev',
+      preferredProvider: 'OpenAI',
+      connectorNotes: 'High-trust connectors remain centrally governed.'
+    }
   };
 }
