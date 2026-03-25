@@ -109,9 +109,13 @@ export function AppShellLayout(props: AppShellLayoutProps) {
               const Icon = iconByArea[area.key];
               const active = props.pathname?.startsWith(`/${area.key}`) ?? props.area === area.key;
               return (
-                <button
+                <a
                   key={area.key}
-                  onClick={() => props.onNavigate(areaHref(area.key))}
+                  href={areaHref(area.key)}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    props.onNavigate(areaHref(area.key));
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -124,7 +128,8 @@ export function AppShellLayout(props: AppShellLayoutProps) {
                     padding: '12px 14px',
                     textAlign: 'left',
                     cursor: 'pointer',
-                    fontWeight: 650
+                    fontWeight: 650,
+                    textDecoration: 'none'
                   }}
                 >
                   <Icon size={18} />
@@ -132,7 +137,7 @@ export function AppShellLayout(props: AppShellLayoutProps) {
                     <span>{area.label}</span>
                     <span style={{ fontSize: 12, fontWeight: 500, color: active ? tokens.brandStrong : tokens.muted }}>{area.description}</span>
                   </div>
-                </button>
+                </a>
               );
             })}
           </nav>

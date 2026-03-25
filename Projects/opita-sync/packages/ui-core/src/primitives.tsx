@@ -87,7 +87,7 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 export function Button(props: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; size?: 'sm' | 'md' | 'lg' }) {
   const { tokens } = useTheme();
-  const { variant = 'primary', size = 'md', style, ...rest } = props;
+  const { variant = 'primary', size = 'md', style, type, ...rest } = props;
   const disabled = Boolean(rest.disabled);
   const styles = useMemo(() => {
     const base = {
@@ -136,9 +136,10 @@ export function Button(props: ButtonHTMLAttributes<HTMLButtonElement> & { varian
   }, [disabled, size, tokens, variant]);
 
   return (
-      <button
-        {...rest}
-        data-ui="button"
+    <button
+      type={type ?? 'button'}
+      {...rest}
+      data-ui="button"
         style={{
           ...styles,
           opacity: disabled ? 0.58 : 1,
