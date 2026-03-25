@@ -1,0 +1,501 @@
+{
+  "version": 1,
+  "updatedAt": "2026-03-25T11:26:23.825Z",
+  "policySet": {
+    "policySetId": "policy_default_tenant_1",
+    "version": "1.0.0",
+    "scope": "tenant",
+    "status": "active",
+    "rules": [
+      {
+        "ruleId": "allow_customer_drafts",
+        "effect": "allow",
+        "precedenceWeight": 1,
+        "conditions": [
+          "domain=customer",
+          "effect=draft_only"
+        ],
+        "explanationTemplate": "Customer-domain draft operations are allowed under tenant policy."
+      },
+      {
+        "ruleId": "require_approval_for_send",
+        "effect": "require_approval",
+        "precedenceWeight": 4,
+        "conditions": [
+          "effect=external_send"
+        ],
+        "obligations": [
+          "approval:pre_application"
+        ],
+        "explanationTemplate": "External send requires approval before application."
+      },
+      {
+        "ruleId": "deny_restricted_send",
+        "effect": "deny",
+        "precedenceWeight": 10,
+        "conditions": [
+          "classification=restricted",
+          "action=send"
+        ],
+        "explanationTemplate": "Restricted-classification send is denied by policy."
+      }
+    ]
+  },
+  "catalog": [
+    {
+      "assetId": "action_customer_followup",
+      "assetKind": "action",
+      "name": "Customer Follow-up",
+      "description": "Prepare a governed customer follow-up draft",
+      "lifecycleState": "published",
+      "version": "1.0.0",
+      "approvalMode": "pre-application",
+      "classificationTags": [
+        "customer"
+      ],
+      "connectorIds": [
+        "connector_email"
+      ],
+      "publishedSemanticHash": "hash_customer_followup_v1",
+      "inputContractRef": "contract:action_customer_followup:input:v1",
+      "outputContractRef": "contract:action_customer_followup:output:v1"
+    },
+    {
+      "assetId": "action_customer_triage",
+      "assetKind": "action",
+      "name": "Customer Triage",
+      "description": "Classify and summarize customer ticket threads",
+      "lifecycleState": "published",
+      "version": "1.0.0",
+      "approvalMode": "auto",
+      "classificationTags": [
+        "customer"
+      ],
+      "connectorIds": [
+        "connector_crm"
+      ],
+      "publishedSemanticHash": "hash_customer_triage_v1",
+      "inputContractRef": "contract:action_customer_triage:input:v1",
+      "outputContractRef": "contract:action_customer_triage:output:v1"
+    }
+  ],
+  "runRecords": [
+    {
+      "runId": "run_1",
+      "contract": {
+        "contractId": "contract_1",
+        "revision": 1,
+        "tenantId": "tenant_1",
+        "environment": "dev",
+        "initiatorUserId": "user_1",
+        "authorityContextId": "authority:user_1",
+        "sourceType": "chat",
+        "objectiveText": "Prepare governed customer follow-up draft",
+        "requestedOutcome": "action_execution",
+        "successCriteria": [
+          "contract normalized",
+          "await admissibility evaluation"
+        ],
+        "urgency": "normal",
+        "domainContext": "catalog_action",
+        "includedEntities": [],
+        "excludedEntities": [],
+        "allowedDataDomains": [
+          "customer"
+        ],
+        "excludedDataDomains": [],
+        "allowedExternalEffectClass": "draft_only",
+        "requestedActionAssetId": "action_customer_followup",
+        "dynamicCompositionRequested": false,
+        "classificationCeiling": "confidential",
+        "allowedConnectorIds": [
+          "connector_email"
+        ],
+        "allowedCredentialScopeIds": [
+          "cred:connector_email"
+        ],
+        "approvalExpectationMode": "pre-application",
+        "draftGenerationAllowed": true,
+        "applyAllowed": false,
+        "sendAllowed": false,
+        "outputSensitivityExpectation": "governed_output_required",
+        "desiredOutputForm": "structured_summary",
+        "disclosureAudience": "initiator",
+        "exportRequested": false,
+        "sendRequested": false,
+        "draftOnly": true,
+        "userConstraints": [],
+        "systemConstraints": [
+          "intent_normalized_before_execution"
+        ],
+        "policyConstraints": [],
+        "classificationConstraints": [],
+        "status": "approval_required",
+        "createdAt": "2026-03-25T08:12:03.121Z",
+        "updatedAt": "2026-03-25T08:12:03.121Z"
+      },
+      "admissibility": {
+        "decisionId": "contract:contract_1:r1:approval_required",
+        "contractRef": "contract:contract_1:r1",
+        "status": "approval_required",
+        "policyOutcome": "allow",
+        "restrictions": [],
+        "reasons": [
+          "approval_required_before_progress"
+        ],
+        "requiredApprovalMode": "pre-application"
+      },
+      "policyDecision": {
+        "decisionId": "policy_default_tenant_1:allow_customer_drafts",
+        "outcome": "allow",
+        "matchedRuleIds": [
+          "allow_customer_drafts"
+        ],
+        "restrictiveRuleIds": [
+          "allow_customer_drafts"
+        ],
+        "obligations": [],
+        "restrictedConnectorIds": [],
+        "restrictedDataDomains": [],
+        "approvalRequirements": [],
+        "explanationSummary": "Customer-domain draft operations are allowed under tenant policy.",
+        "createdAt": "2026-03-25T08:12:03.122Z"
+      },
+      "classification": {
+        "artifactId": "classification:contract_1:r1",
+        "classification": {
+          "level": "confidential",
+          "tags": [
+            "customer"
+          ]
+        },
+        "handlingObligations": [
+          "tags:customer"
+        ],
+        "releaseRestrictions": [],
+        "mixedAuthorityRisk": "none"
+      },
+      "plan": {
+        "planId": "plan:contract:contract_1:r1:provisional",
+        "contractRef": "contract:contract_1:r1",
+        "admissibilityDecisionRef": "contract:contract_1:r1:approval_required",
+        "status": "compiled",
+        "selectedAssetRefs": [
+          "action_customer_followup"
+        ],
+        "steps": [
+          {
+            "stepId": "step:1",
+            "assetRef": "action_customer_followup",
+            "kind": "action",
+            "connectorIds": []
+          }
+        ],
+        "approvalMode": "pre-application",
+        "outputCheckpointRequired": true
+      },
+      "run": {
+        "runId": "run_1",
+        "tenantId": "tenant_1",
+        "environment": "dev",
+        "contractId": "contract_1",
+        "contractRevision": 1,
+        "planSnapshot": {
+          "planId": "plan:contract:contract_1:r1:provisional",
+          "contractRef": "contract:contract_1:r1",
+          "admissibilityDecisionRef": "contract:contract_1:r1:approval_required",
+          "status": "compiled",
+          "selectedAssetRefs": [
+            "action_customer_followup"
+          ],
+          "steps": [
+            {
+              "stepId": "step:1",
+              "assetRef": "action_customer_followup",
+              "kind": "action",
+              "connectorIds": []
+            }
+          ],
+          "approvalMode": "pre-application",
+          "outputCheckpointRequired": true
+        },
+        "state": "release_approval_required",
+        "createdAt": "2026-03-25T08:12:03.122Z",
+        "updatedAt": "2026-03-25T08:12:03.123Z"
+      },
+      "approvalCase": {
+        "approvalCaseId": "approval:run_1:1",
+        "runId": "run_1",
+        "contractId": "contract_1",
+        "contractRevision": 1,
+        "mode": "pre-application",
+        "approverIds": [
+          "approver_1"
+        ],
+        "evidenceRefs": [
+          "contract:contract_1:r1"
+        ],
+        "state": "pending",
+        "requestedAt": "2026-03-25T08:12:03.122Z"
+      },
+      "releaseDecision": {
+        "releaseDecisionId": "release:out:run_1",
+        "runId": "run_1",
+        "outputArtifactId": "out:run_1",
+        "decision": "hold_for_approval",
+        "reasons": [
+          "pre_application_approval_required"
+        ],
+        "governingPolicyRuleIds": [
+          "allow_customer_drafts"
+        ],
+        "classificationRefs": [
+          "classification:contract_1:r1"
+        ],
+        "mixedAuthorityAnalysisRef": "mixed:out:run_1",
+        "approvalCaseRef": "approval:run_1:1",
+        "decidedAt": "2026-03-25T08:12:03.123Z"
+      },
+      "inboxItems": [
+        {
+          "inboxItemId": "inbox:approval:run_1:1",
+          "itemType": "approval",
+          "runId": "run_1",
+          "status": "pending",
+          "summary": "Approval required for run run_1"
+        },
+        {
+          "inboxItemId": "inbox:release:out:run_1",
+          "itemType": "release_review",
+          "runId": "run_1",
+          "status": "pending",
+          "summary": "Release approval required for run run_1"
+        }
+      ],
+      "runtimeEvents": [
+        {
+          "eventId": "run-event:run_1:run.created:1774426323123",
+          "runId": "run_1",
+          "eventType": "run.created",
+          "toState": "execution_completed",
+          "occurredAt": "2026-03-25T08:12:03.123Z",
+          "reason": "run_initialized"
+        },
+        {
+          "eventId": "run-event:run_1:run.execution_completed:1774426323123",
+          "runId": "run_1",
+          "eventType": "run.execution_completed",
+          "fromState": "queued",
+          "toState": "execution_completed",
+          "occurredAt": "2026-03-25T08:12:03.123Z",
+          "reason": "execution_done"
+        },
+        {
+          "eventId": "run-event:run_1:run.output_review:1774426323123",
+          "runId": "run_1",
+          "eventType": "run.output_review",
+          "fromState": "execution_completed",
+          "toState": "output_review",
+          "occurredAt": "2026-03-25T08:12:03.123Z",
+          "reason": "release_evaluation_started"
+        },
+        {
+          "eventId": "run-event:run_1:run.release_held:1774426323123",
+          "runId": "run_1",
+          "eventType": "run.release_held",
+          "fromState": "output_review",
+          "toState": "release_approval_required",
+          "occurredAt": "2026-03-25T08:12:03.123Z",
+          "reason": "pre_application_approval_required"
+        }
+      ]
+    },
+    {
+      "runId": "run_2",
+      "contract": {
+        "contractId": "contract_2",
+        "revision": 1,
+        "tenantId": "tenant_1",
+        "environment": "dev",
+        "initiatorUserId": "user_1",
+        "authorityContextId": "authority:user_1",
+        "sourceType": "chat",
+        "objectiveText": "test",
+        "requestedOutcome": "action_execution",
+        "successCriteria": [
+          "contract normalized",
+          "await admissibility evaluation"
+        ],
+        "urgency": "normal",
+        "domainContext": "catalog_action",
+        "includedEntities": [],
+        "excludedEntities": [],
+        "allowedDataDomains": [
+          "customer"
+        ],
+        "excludedDataDomains": [],
+        "allowedExternalEffectClass": "draft_only",
+        "requestedActionAssetId": "action_customer_followup",
+        "dynamicCompositionRequested": false,
+        "classificationCeiling": "confidential",
+        "allowedConnectorIds": [
+          "connector_email"
+        ],
+        "allowedCredentialScopeIds": [
+          "cred:connector_email"
+        ],
+        "approvalExpectationMode": "pre-application",
+        "draftGenerationAllowed": true,
+        "applyAllowed": false,
+        "sendAllowed": false,
+        "outputSensitivityExpectation": "governed_output_required",
+        "desiredOutputForm": "structured_summary",
+        "disclosureAudience": "initiator",
+        "exportRequested": false,
+        "sendRequested": false,
+        "draftOnly": true,
+        "userConstraints": [],
+        "systemConstraints": [
+          "intent_normalized_before_execution"
+        ],
+        "policyConstraints": [],
+        "classificationConstraints": [],
+        "status": "approval_required",
+        "createdAt": "2026-03-25T11:26:23.824Z",
+        "updatedAt": "2026-03-25T11:26:23.824Z"
+      },
+      "admissibility": {
+        "decisionId": "contract:contract_2:r1:approval_required",
+        "contractRef": "contract:contract_2:r1",
+        "status": "approval_required",
+        "policyOutcome": "allow",
+        "restrictions": [],
+        "reasons": [
+          "approval_required_before_progress"
+        ],
+        "requiredApprovalMode": "pre-application"
+      },
+      "policyDecision": {
+        "decisionId": "policy_default_tenant_1:allow_customer_drafts",
+        "outcome": "allow",
+        "matchedRuleIds": [
+          "allow_customer_drafts"
+        ],
+        "restrictiveRuleIds": [
+          "allow_customer_drafts"
+        ],
+        "obligations": [],
+        "restrictedConnectorIds": [],
+        "restrictedDataDomains": [],
+        "approvalRequirements": [],
+        "explanationSummary": "Customer-domain draft operations are allowed under tenant policy.",
+        "createdAt": "2026-03-25T11:26:23.824Z"
+      },
+      "classification": {
+        "artifactId": "classification:contract_2:r1",
+        "classification": {
+          "level": "confidential",
+          "tags": [
+            "customer"
+          ]
+        },
+        "handlingObligations": [
+          "tags:customer"
+        ],
+        "releaseRestrictions": [],
+        "mixedAuthorityRisk": "none"
+      },
+      "plan": {
+        "planId": "plan:contract:contract_2:r1:provisional",
+        "contractRef": "contract:contract_2:r1",
+        "admissibilityDecisionRef": "contract:contract_2:r1:approval_required",
+        "status": "compiled",
+        "selectedAssetRefs": [
+          "action_customer_followup"
+        ],
+        "steps": [
+          {
+            "stepId": "step:1",
+            "assetRef": "action_customer_followup",
+            "kind": "action",
+            "connectorIds": []
+          }
+        ],
+        "approvalMode": "pre-application",
+        "outputCheckpointRequired": true
+      },
+      "run": {
+        "runId": "run_2",
+        "tenantId": "tenant_1",
+        "environment": "dev",
+        "contractId": "contract_2",
+        "contractRevision": 1,
+        "planSnapshot": {
+          "planId": "plan:contract:contract_2:r1:provisional",
+          "contractRef": "contract:contract_2:r1",
+          "admissibilityDecisionRef": "contract:contract_2:r1:approval_required",
+          "status": "compiled",
+          "selectedAssetRefs": [
+            "action_customer_followup"
+          ],
+          "steps": [
+            {
+              "stepId": "step:1",
+              "assetRef": "action_customer_followup",
+              "kind": "action",
+              "connectorIds": []
+            }
+          ],
+          "approvalMode": "pre-application",
+          "outputCheckpointRequired": true
+        },
+        "state": "execution_completed",
+        "createdAt": "2026-03-25T11:26:23.825Z",
+        "updatedAt": "2026-03-25T11:26:23.825Z"
+      },
+      "approvalCase": {
+        "approvalCaseId": "approval:run_2:1",
+        "runId": "run_2",
+        "contractId": "contract_2",
+        "contractRevision": 1,
+        "mode": "pre-application",
+        "approverIds": [
+          "approver_1"
+        ],
+        "evidenceRefs": [
+          "contract:contract_2:r1"
+        ],
+        "state": "pending",
+        "requestedAt": "2026-03-25T11:26:23.825Z"
+      },
+      "inboxItems": [
+        {
+          "inboxItemId": "inbox:approval:run_2:1",
+          "itemType": "approval",
+          "runId": "run_2",
+          "status": "pending",
+          "summary": "Approval required for run run_2"
+        }
+      ],
+      "runtimeEvents": [
+        {
+          "eventId": "run-event:run_2:run.created:1774437983825",
+          "runId": "run_2",
+          "eventType": "run.created",
+          "toState": "execution_completed",
+          "occurredAt": "2026-03-25T11:26:23.825Z",
+          "reason": "run_initialized"
+        },
+        {
+          "eventId": "run-event:run_2:run.execution_completed:1774437983825",
+          "runId": "run_2",
+          "eventType": "run.execution_completed",
+          "fromState": "queued",
+          "toState": "execution_completed",
+          "occurredAt": "2026-03-25T11:26:23.825Z",
+          "reason": "execution_done"
+        }
+      ]
+    }
+  ]
+}

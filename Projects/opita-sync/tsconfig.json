@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@opita/ui-core": ["packages/ui-core/src/index.ts"],
+      "@opita/ui-core/*": ["packages/ui-core/src/*"],
+      "@opita/ui-opita": ["packages/ui-opita/src/index.ts"],
+      "@opita/ui-opita/*": ["packages/ui-opita/src/*"],
+      "@web/*": ["apps/web/src/*"],
+      "@api/*": ["services/api/src/*"]
+    },
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "jsx": "react-jsx",
+    "types": ["node"]
+  },
+  "include": [
+    "packages/**/*.ts",
+    "services/**/*.ts",
+    "apps/**/*.ts",
+    "apps/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "scripts/**/*.ts",
+    "scripts/**/*.tsx",
+    "scripts/**/*.mjs"
+  ]
+}

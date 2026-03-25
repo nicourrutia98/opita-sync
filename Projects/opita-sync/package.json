@@ -1,0 +1,40 @@
+{
+  "name": "opita-sync",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Canonical scaffold for Opita Sync",
+  "packageManager": "npm@10",
+  "type": "module",
+  "scripts": {
+    "spec:check": "node scripts/spec-check.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test tests/**/*.test.ts tests/**/*.test.tsx",
+    "web:dev": "cd apps/web && next dev --webpack -p 5173",
+    "web:build": "cd apps/web && next build --webpack",
+    "web:start": "cd apps/web && next start -p 5173",
+    "web:smoke": "tsx scripts/web-smoke.tsx",
+    "db:init": "tsx scripts/db-init.ts",
+    "db:show": "tsx scripts/db-show.ts",
+    "smoke:all": "tsx scripts/smoke-all.ts",
+    "api:dev": "tsx scripts/api-serve.ts",
+    "api:smoke": "tsx scripts/api-smoke.ts"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@tanstack/react-query": "^5.95.2",
+    "@tanstack/react-table": "^8.21.3",
+    "lucide-react": "^0.552.0",
+    "next": "^16.2.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-hook-form": "^7.72.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

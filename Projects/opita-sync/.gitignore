@@ -1,0 +1,7 @@
+_starter_pack_review/
+node_modules/
+.next/
+cache/
+dist/
+*.log
+apps/web/smoke-output.html

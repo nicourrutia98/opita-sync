@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "plugins": [{ "name": "next" }]
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "../../packages/**/*.ts", "../../packages/**/*.tsx", "../../services/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+
